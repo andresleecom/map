@@ -61,6 +61,8 @@ Paste the output in your REPORT under PROOF.
 HARD RULES — violating any of these means your work is discarded:
 - NO git commands of any kind (no commit, branch, push, reset, checkout, stash).
 - NO dependency changes: no package installs, no lockfile edits, no tool installs.
+  If your solution needs a library the module does not declare, STOP and say so
+  in NOTES instead of writing code that cannot compile.
 - Edit ONLY within the scope listed above. If the fix requires touching anything
   else, STOP and explain in your REPORT instead of doing it.
 - If blocked or uncertain, STOP and report — do not improvise around the spec.

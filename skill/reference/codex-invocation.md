@@ -10,22 +10,41 @@ codex exec \
   -s workspace-write \
   -c approval_policy=never \
   --skip-git-repo-check \
+  -c model_reasoning_effort=xhigh \
   -C "<absolute repo path>" \
   -o ".map/out/NN.md" \
-  - < ".map/tasks/NN-<slug>.md"
+  - < ".map/tasks/NN-<slug>.md" 2>/dev/null
 ```
 
 Run it with the Bash tool in background mode (`run_in_background: true`) — codex
-runs take minutes and Claude gets notified on exit. Then read only the `## REPORT`
-tail of the output file.
+runs take minutes (quiet xhigh runs up to ~30 min are normal; don't kill early)
+and Claude gets notified on exit. Then read only the `## REPORT` tail of the
+output file.
 
-For very short prompts, the argument form also works — but stdin must still be
-closed:
+The prompt goes via file, always — never inline: files give an audit trail in
+`.map/tasks/`, dodge shell-quoting bugs, and avoid Windows arg-length limits.
+`2>/dev/null` suppresses codex's thinking noise (it bloats any context that peeks
+at interim output); drop it only when debugging a failing run — the `-o` file
+carries the result either way.
+
+## Follow-up runs: `resume`
+
+For strike-1 retries, resuming the previous codex session keeps its context (it
+already read the codebase) and is cheaper than a fresh run:
 
 ```bash
-codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \
-  -C "<repo>" -o "<outfile>" "<prompt>" < /dev/null
+(cd "<repo>" && codex exec resume --last \
+  -s workspace-write -c approval_policy=never \
+  -o ".map/out/NN-r2.md" - < ".map/tasks/NN-<slug>.md" 2>/dev/null)
 ```
+
+Caveats: `resume` does not accept `-C` — you must cd into the repo. Verify ONCE
+in your environment that resume accepts the sandbox flags (`codex exec resume
+--help`); write-ups that use resume typically pass
+`--dangerously-bypass-approvals-and-sandbox` instead, which restricted auto-mode
+classifiers block. If sandbox flags don't work with resume, use a fresh dispatch —
+correctness beats the token saving. Also: `--last` grabs the most recent session;
+never use it while another codex run is in flight.
 
 ## Flags explained
 
@@ -38,7 +57,8 @@ codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \
 | `-C <path>` | Working directory — always pass the repo root explicitly. |
 | `-o <file>` | Write the final message to a file; keeps Claude's context clean. |
 | `-` + `< packet.md` | Read the prompt from stdin (file), which also closes stdin. |
-| `-c model_reasoning_effort=<level>` | Optional override; lower for trivial tasks, raise on a strike-1 retry. |
+| `-c model_reasoning_effort=<level>` | House default `xhigh` for implementation; `medium` for trivial mechanical tasks and read-only surveys. |
+| `2>/dev/null` | Suppress thinking-noise on stderr; remove only to debug. |
 
 ## Gotchas (each one cost a debugging session — respect them)
 

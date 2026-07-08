@@ -94,10 +94,15 @@ For each task, in order (parallel only if tasks are provably file-disjoint, max 
 - **Strike 1**: revert the working tree to the last commit (`git checkout -- .` +
   `git clean -fd` scoped to affected paths). Re-dispatch with a sharpened packet that
   names the exact defect ("your change broke X because Y; the fix must Z") and adds
-  the missing context.
+  the missing context. Prefer `codex exec resume --last` for the retry — it keeps
+  codex's session context and is cheaper than a fresh run — IF it accepts the
+  sandbox flags in your environment (verify once; see reference). Else fresh dispatch.
 - **Strike 2**: Claude implements the task itself. Log the takeover and why —
   patterns in the log teach what not to delegate next time.
-- A codex run that hangs >10 min or exits without a REPORT counts as a strike.
+- A run that exits without a REPORT counts as a strike. A quiet run does NOT —
+  xhigh runs legitimately take up to ~30 min; only treat it as hung after that.
+- A `blocked` REPORT usually means the packet was underspecified — that's a spec
+  defect, not a codex defect. Fix the decision (record it in the MAP), then retry.
 
 ## Phase 3 — Close
 
@@ -128,17 +133,25 @@ HARD RULES — violating any of these means your work is discarded:
 ## Invocation
 
 Full command reference, flags, and known gotchas: `reference/codex-invocation.md`.
-The battle-tested shape (Git Bash, run in background, packet as file):
+The battle-tested shape (Git Bash, run in background, prompt ALWAYS via file):
 
 ```bash
 codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \
-  -C "<absolute repo path>" -o ".map/out/NN.md" - < ".map/tasks/NN-<slug>.md"
+  -c model_reasoning_effort=xhigh \
+  -C "<absolute repo path>" -o ".map/out/NN.md" - < ".map/tasks/NN-<slug>.md" 2>/dev/null
 ```
 
-Critical: stdin **must** be closed or redirected (`- < file` or `< /dev/null`) —
-codex waits on stdin forever otherwise. Do **not** use `--yolo` or
-`--dangerously-bypass-approvals-and-sandbox` (blocked in restricted auto-mode;
-the sandbox flags above are the working equivalent).
+- stdin **must** be closed or redirected (`- < file`) — codex waits on stdin
+  forever otherwise. Never pass the prompt inline (audit trail + arg-length limits).
+- `2>/dev/null` keeps thinking noise out of context; drop it only to debug a run.
+- `model_reasoning_effort`: xhigh for implementation, `medium` for trivial
+  mechanical tasks and surveys.
+- Do **not** use `--yolo` / `--dangerously-bypass-approvals-and-sandbox` (blocked
+  by restricted auto-mode classifiers, and they disable codex's own sandbox — a
+  layer the hard-rules contract relies on). The flags above are the working
+  equivalent.
+- Be patient: quiet runs under ~30 min are normal at xhigh. Parallel dispatches
+  need separate working dirs and separate `-o` files.
 
 ## Resume
 

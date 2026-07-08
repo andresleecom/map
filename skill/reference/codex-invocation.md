@@ -77,6 +77,17 @@ never use it while another codex run is in flight.
    packages before typechecking, or verification fails on ghosts codex didn't cause.
 5. **Windows paths.** From Git Bash, prefer forward slashes and quote every path —
    `"C:/Users/Name With Spaces/..."`.
+6. **Transient Windows sandbox death: `CreateProcessAsUserW failed: 1312`.**
+   Occasionally codex's sandbox cannot create its logon session; the run exits
+   "cleanly" having done zero work (an honest REPORT will say so). Not a model
+   failure and not a strike — just re-dispatch. If it repeats, stop running
+   codex instances concurrently and retry solo.
+7. **Sandbox network is asymmetric.** localhost TCP (a local Postgres, a dev
+   server) tends to work inside `workspace-write`; external HTTPS (Gradle plugin
+   portals, package registries) gets blocked or TLS-broken (`PKIX path building
+   failed`). Consequence: JS/TS builds against local caches usually self-verify,
+   JVM/Gradle builds usually cannot — expect UNRUN proofs and verify those
+   outside the sandbox.
 
 ## Recon packets (read-only surveys)
 

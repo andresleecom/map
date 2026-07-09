@@ -5,8 +5,8 @@
 `map` is a [Claude Code skill](https://code.claude.com/docs/en/skills) that splits
 coding work by comparative advantage: the expensive frontier model in your session
 handles judgment — recon, interviewing you, freezing decisions, writing specs,
-reviewing diffs — while [Codex CLI](https://github.com/openai/codex) burns the cheap
-tokens actually typing the code.
+reviewing diffs — while [Codex CLI](https://github.com/openai/codex) (pinned to
+GPT-5.6-Sol) burns the cheap tokens actually typing the code.
 
 ```
 you ──/map──▶ Claude                                  codex
@@ -49,7 +49,9 @@ fine when the spec is frozen. `map` makes the split systematic:
 ## Install
 
 Requires Claude Code and an authenticated [Codex CLI](https://github.com/openai/codex)
-(`codex exec` must work headlessly).
+with access to `gpt-5.6-sol` (`codex exec -m gpt-5.6-sol` must work headlessly;
+Intel Macs currently need a fallback model — see
+[`skill/reference/codex-invocation.md`](skill/reference/codex-invocation.md)).
 
 ```bash
 git clone https://github.com/andresleecom/map.git

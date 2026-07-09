@@ -9,11 +9,12 @@ Claude thinks. Codex types. Claude verifies. Nothing merges unreviewed.
 
 ## Why this exists
 
-The session model (Claude) is the expensive, high-judgment resource. Codex CLI is the
-cheap, tireless executor. A MAP converts a vague request into a frozen, verifiable plan
-(where Claude's tokens are worth spending), then drains execution tokens into codex
-(where they're nearly free). Success = Claude's context holds decisions, specs, and
-diffs — never bulk code generation or bulk file reading.
+The session model (Claude) is the expensive, high-judgment resource. Codex CLI
+running GPT-5.6-Sol is the cheap, tireless executor. A MAP converts a vague request
+into a frozen, verifiable plan (where Claude's tokens are worth spending), then
+drains execution tokens into codex (where they're nearly free). Success = Claude's
+context holds decisions, specs, and diffs — never bulk code generation or bulk
+file reading.
 
 ## Token discipline (binding rules for Claude)
 
@@ -92,15 +93,19 @@ For each task, in order (parallel only if tasks are provably file-disjoint, max 
 ## Failure protocol — two strikes
 
 - **Strike 1**: revert the working tree to the last commit (`git checkout -- .` +
-  `git clean -fd` scoped to affected paths). Re-dispatch with a sharpened packet that
-  names the exact defect ("your change broke X because Y; the fix must Z") and adds
-  the missing context. Prefer `codex exec resume --last` for the retry — it keeps
-  codex's session context and is cheaper than a fresh run — IF it accepts the
-  sandbox flags in your environment (verify once; see reference). Else fresh dispatch.
+  `git clean -fd` scoped to affected paths). Re-dispatch with a sharpened packet —
+  written to `.map/tasks/NN-<slug>-r2.md`, keeping the original for the audit
+  trail — that names the exact defect ("your change broke X because Y; the fix
+  must Z") and adds the missing context. If the failure was one of reasoning
+  (not a spec gap), also escalate `model_reasoning_effort` to `max`. Prefer
+  `codex exec resume <session-id>` for the retry — it keeps codex's session
+  context and is cheaper than a fresh run — but resume takes different flags and
+  forgets the model unless re-pinned (see reference).
 - **Strike 2**: Claude implements the task itself. Log the takeover and why —
   patterns in the log teach what not to delegate next time.
 - A run that exits without a REPORT counts as a strike. A quiet run does NOT —
-  xhigh runs legitimately take up to ~30 min; only treat it as hung after that.
+  xhigh runs legitimately take up to ~30 min, and a `max` retry can run longer
+  (allow roughly double); only treat it as hung after that.
 - A `blocked` REPORT usually means the packet was underspecified — that's a spec
   defect, not a codex defect. Fix the decision (record it in the MAP), then retry.
 
@@ -137,15 +142,19 @@ The battle-tested shape (Git Bash, run in background, prompt ALWAYS via file):
 
 ```bash
 codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \
-  -c model_reasoning_effort=xhigh \
+  -m gpt-5.6-sol -c model_reasoning_effort=xhigh \
   -C "<absolute repo path>" -o ".map/out/NN.md" - < ".map/tasks/NN-<slug>.md" 2>/dev/null
 ```
 
 - stdin **must** be closed or redirected (`- < file`) — codex waits on stdin
   forever otherwise. Never pass the prompt inline (audit trail + arg-length limits).
 - `2>/dev/null` keeps thinking noise out of context; drop it only to debug a run.
-- `model_reasoning_effort`: xhigh for implementation, `medium` for trivial
-  mechanical tasks and surveys.
+- `-m gpt-5.6-sol`: always pin the model — never ride the machine's config default.
+- `model_reasoning_effort`: never omit it — unpinned, it falls back to machine
+  config or Sol's `low` catalog default. `xhigh` for implementation, `medium` for
+  trivial mechanical tasks and surveys, `max` for strike-1 retries of reasoning
+  failures. Never `ultra` in packets — it delegates sub-tasks on its own (see
+  reference for why that loses).
 - Do **not** use `--yolo` / `--dangerously-bypass-approvals-and-sandbox` (blocked
   by restricted auto-mode classifiers, and they disable codex's own sandbox — a
   layer the hard-rules contract relies on). The flags above are the working

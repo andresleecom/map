@@ -118,7 +118,13 @@ Caveats, verified on 0.144 with real resumed runs:
 2. **`--yolo` / `--dangerously-bypass-approvals-and-sandbox` get blocked** by
    Claude Code's auto-mode command classifier (they bypass codex's sandbox, which
    the harness treats as unauthorized). `-s workspace-write -c approval_policy=never`
-   is the working equivalent and keeps codex's own sandbox on.
+   is the working equivalent and keeps codex's own sandbox on. Stricter
+   permission modes can deny even this sanctioned form — do not retry it with
+   adjusted flags; one denial of the plain dispatch → switch executors
+   (SKILL.md, Executor fallback, which also covers the settings remedy). The
+   allowlist rule matches plain dispatches only: the parenthesized resume form
+   may still prompt, and if only resume is denied, fall back to a fresh plain
+   dispatch — not to another executor.
 3. **Non-fatal MCP auth noise.** A misconfigured MCP server in codex's own config
    (e.g. github-copilot) may print an auth error at startup. It does not affect the
    run — ignore it; don't burn a strike on it.
@@ -131,7 +137,9 @@ Caveats, verified on 0.144 with real resumed runs:
    Occasionally codex's sandbox cannot create its logon session; the run exits
    "cleanly" having done zero work (an honest REPORT will say so). Not a model
    failure and not a strike — just re-dispatch. If it repeats, stop running
-   codex instances concurrently and retry solo.
+   codex instances concurrently and retry solo. If every spawn still fails
+   solo, codex is unavailable on this machine — stop re-dispatching and
+   switch executors (SKILL.md, Executor fallback).
 7. **Sandbox network is asymmetric.** localhost TCP (a local Postgres, a dev
    server) tends to work inside `workspace-write`; external HTTPS (Gradle plugin
    portals, package registries) gets blocked or TLS-broken (`PKIX path building

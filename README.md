@@ -68,6 +68,17 @@ cd map
 Both link `skill/` into `~/.claude/skills/map`, so `git pull` updates the skill
 in place.
 
+Under a restricted Claude Code permission mode, the command classifier may deny
+`codex exec` dispatches outright (the skill then falls back to Claude subagents —
+see SKILL.md's Executor fallback). To keep codex-based execution available, add
+`"Bash(codex exec:*)"` to the `permissions.allow` array in
+`~/.claude/settings.json` — merge into your existing file (or use
+`/permissions`); the entry's shape:
+
+```json
+{ "permissions": { "allow": ["Bash(codex exec:*)"] } }
+```
+
 ## Use
 
 ```

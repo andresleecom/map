@@ -12,7 +12,7 @@ command codex exec \
   -c approval_policy=never \
   --skip-git-repo-check \
   -m gpt-5.6-sol \
-  -c model_reasoning_effort=xhigh \
+  -c model_reasoning_effort=high \
   -C "<absolute repo path>" \
   -o ".map/out/NN.md" \
   - < ".map/tasks/NN-<slug>.md" 2>/dev/null
@@ -25,9 +25,9 @@ If `codex` is not on PATH because of a node version manager:
 fnm exec --using default -- codex exec ...   # or: nvm exec default codex exec ...
 ```
 
-Run it in background mode when the host supports it — codex runs take minutes
-(quiet xhigh runs up to ~30 min are normal, `max` retries longer; don't kill early).
-Then read only the `## REPORT` tail of the `-o` file.
+Run it in background mode when the host supports it. Quiet `high` runs often
+finish in a few minutes; only budget ~30 min if you escalated to `xhigh`/`max`.
+Don't kill early. Then read only the `## REPORT` tail of the `-o` file.
 Do **not** parse the JSONL session stream for results (session logs are only for
 finding a `session-id` on resume).
 
@@ -57,7 +57,7 @@ command codex exec \
   -c approval_policy=never \
   --skip-git-repo-check \
   -m gpt-5.6-sol \
-  -c model_reasoning_effort=xhigh \
+  -c model_reasoning_effort=high \
   -C "<absolute repo path>" \
   -o ".map/out/NN.md" \
   - < ".map/tasks/NN-<slug>.md" 2>/dev/null
@@ -107,7 +107,7 @@ Get-Content "$repo\.map\tasks\01-slug.md" -Raw | & $codex exec `
   -c approval_policy=never `
   --skip-git-repo-check `
   -m gpt-5.6-sol `
-  -c model_reasoning_effort=xhigh `
+  -c model_reasoning_effort=high `
   -C $repo `
   -o "$repo\.map\out\01.md" `
   - 2> "$repo\.map\out\01.stderr.log"
@@ -129,21 +129,16 @@ Two traps in this setup:
    forgets the effort flag falls back to the machine's config — or, absent that,
    to `low` — and nothing warns you. The model flag and the effort flag travel
    together, always.
-2. **Effort tiers go beyond `xhigh`**: the 5.6 family adds `max` (deepest
-   single-agent reasoning) and `ultra` (`max` + proactive delegation to parallel
-   subagents). House defaults stay `xhigh` for implementation and `medium` for
-   surveys — OpenAI recommends `xhigh` for asynchronous agentic tasks with long
-   runs, and says most tasks don't need `max` or `ultra`. Reserve `max` for
-   strike-1 retries of reasoning failures, and budget it more patience than
-   xhigh's ~30-min ceiling. Never use `ultra` in packets: parallel subagents
-   editing at once create the exact conflicts the packet's tight scoping exists
-   to prevent, it burns 2-3× the tokens, and it's account-gated — three ways to
-   lose for zero MAP upside.
+2. **Effort policy:** house default is **`high`** for implementation (speed) and
+   **`medium`** for surveys / trivial mechanical work. Escalate to `xhigh` only
+   when a task needs more depth and `high` quality was weak; reserve **`max`**
+   for strike-1 reasoning-failure retries (budget more patience). The 5.6 family
+   also has `ultra` (`max` + parallel subagents) — **never use `ultra` in
+   packets**: concurrent editors fight the packet's tight scoping, burn 2-3×
+   tokens, and are account-gated.
 
-Optional experiment (not the house default): for trivial mechanical tasks only,
-some operators try `model_reasoning_effort=high` with `--enable fast_mode`.
-Do not use that for non-trivial implementation until you have measured quality
-on your machine.
+Optional: for trivial mechanical tasks only, some operators add
+`--enable fast_mode` on top of `high`. Measure quality before relying on it.
 
 Platform note: Sol has an open crash on Intel macOS — SIGTRAP on its first shell
 call ([openai/codex#30861](https://github.com/openai/codex/issues/30861)); the

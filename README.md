@@ -39,9 +39,13 @@ fine when the spec is frozen. `map` makes the split systematic:
   orchestrator reviews the diff as a hostile code reviewer, re-runs the task's
   verify bar (build → tests → drive-the-flow), and commits per verified task.
   Codex PROOF is advisory only.
-- **Two strikes.** One sharpened retry that names the exact defect; then the
-  orchestrator implements it itself and logs why. Sandbox spawn failures are
-  **not** model strikes — they re-dispatch with a documented fallback.
+- **Two strikes.** One sharpened retry that names the exact defect; then a
+  pinned frontier subagent (not the main session thread) takes over and logs why.
+  Sandbox spawn failures are **not** model strikes — they re-dispatch with a
+  documented fallback. If codex is unavailable entirely, executor fallback is
+  **Opus 4.8** on Claude Code (`model: claude-opus-4-8`) or **Grok 4.5**
+  subagents on Grok Build — never bulk impl in the orchestrator context, and
+  **never Fable** as the model that types product code.
 - **Hard rules.** Codex never touches git, never changes dependencies, never edits
   outside the packet's scope. Commits are yours — clean authorship, no AI attribution.
 - **Token discipline on the orchestrator side too.** Recon delegated to surveys,

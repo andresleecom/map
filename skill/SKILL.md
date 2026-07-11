@@ -144,8 +144,11 @@ take over in the orchestrator and log why.
   `codex exec resume <session-id>` for the retry — it keeps codex's session
   context and is cheaper than a fresh run — but resume takes different flags and
   forgets the model unless re-pinned (see reference).
-- **Strike 2**: the orchestrator implements the task itself. Log the takeover and why —
-  patterns in the log teach what not to delegate next time.
+- **Strike 2**: do **not** implement in the main session thread (and **never**
+  under Fable). Dispatch a takeover packet to the pinned fallback executor
+  (Claude Code: Opus 4.8 only; Grok Build: Grok 4.5 subagent — see Executor
+  fallback). Orchestrator still runs the pass gate and commits. Log the
+  takeover and why — patterns in the log teach what not to delegate next time.
 
 Also treat as fail / strike material (not pass):
 - Run exits without a REPORT.
@@ -167,26 +170,63 @@ fails every spawn even after a solo retry and the documented
 `danger-full-access` fallback (reference, gotchas 2 and 6). The MAP
 survives; only the executor changes.
 
+### Hard rule: never dump implementation into the main session
+
+When codex is unavailable, **do not** implement the packet in the orchestrator
+thread (even if that thread is already Opus, Sonnet, Fable, or Grok).
+Bulk generation in the main context is exactly what MAP exists to avoid.
+Fallback execution always goes to a **pinned frontier subagent**.
+
+### Banned for any MAP implementation path (absolute)
+
+**Never** run packet implementation, strike-1 retry, strike-2 takeover, or
+executor fallback on:
+
+- **Fable** (any id: `claude-fable-*`, `fable`, session default Fable, etc.)
+- Haiku / Sonnet (or other mid-tier aliases) as the *executor*
+- The main session model via `inherit` / omitted `model`
+
+Fable may remain the *orchestrator* (plan, interview, pass gate, commit) if the
+user chose it for the session — that is fine. It must **never** be the model
+that types product code for a MAP task. If the only available subagent would
+inherit Fable, **stop** and tell the user to pin Opus 4.8 (or fix codex) rather
+than implementing under Fable.
+
+### Pinned fallback executor
+
+House pins (update when a new frontier ships; do not drift to mid-tier models):
+
+| Host | Fallback model | How to dispatch |
+|------|----------------|-----------------|
+| **Claude Code** | **Opus 4.8 only** | Agent/Task: `subagent_type=general-purpose`, **`model: claude-opus-4-8`** (required). Alias `opus` only if host docs still resolve it to 4.8 — prefer the full id. **Never** omit `model`. **Never** `fable` / `sonnet` / `haiku` / inherit. |
+| **Grok Build** | **Grok 4.5** | `spawn_subagent` with `subagent_type=general-purpose` — Grok 4.5 agent stack. **Not** the main chat thread. |
+
+Prefer **Codex (gpt-5.6-sol)** whenever it can run. Fallback is only when codex is
+unavailable. Do not mix hosts mid-MAP: Claude Code sessions fall back to Opus 4.8;
+Grok sessions fall back to Grok 4.5 subagents — not the other way around.
+
 - A permission denial is a routing decision, not a flag problem. Swapping a
   blocked bypass flag (`--yolo`) for the sanctioned sandboxed form is fine;
   **never vary the sanctioned form after it is denied** — that reads as a
   bypass attempt. One denial of the plain dispatch → switch executors. (If only
   the subshell resume form is denied, codex is still available — retry as a
   fresh plain dispatch instead.)
-- Record the switch as a numbered decision in `.map/PLAN.md`.
-- Dispatch the same packets to Claude subagents (general-purpose) instead. The
-  packet and contract hold, REPORT format included; only the codex invocation
+- Record the switch as a numbered decision in `.map/PLAN.md`
+  (e.g. `Dxx Executor = Opus 4.8 subagent — codex denied by auto-mode classifier`
+  or `Dxx Executor = Grok 4.5 subagent — codex unavailable`).
+- Dispatch the **same packets** to the pinned subagent. The packet and HARD
+  RULES contract hold, REPORT format included; only the codex CLI invocation
   disappears — the subagent reads the packet file and returns its REPORT as its
   result. Save that REPORT to `.map/out/NN.md` to keep the audit trail.
-  Subagent tokens cost more than codex's, but the bulk reading and generation
-  still stay out of the main context — the MAP's economics degrade, they don't
-  invert.
+  Log with `executor-switch (opus-4.8)` or `executor-switch (grok-4.5)`.
 - The failure protocol applies minus the codex mechanics: a strike-1 retry is a
-  fresh subagent with the sharpened `-r2` packet (no resume, no effort
-  escalation), strike 2 stays a main-context takeover, and strikes already
-  accrued on a task carry across the switch.
-- Review, verify bar, per-task commits: unchanged. The discipline is the point,
-  not the executor.
+  **fresh pinned subagent** with the sharpened `-r2` packet (no codex resume, no
+  effort escalation). Strike 2 is **also** a pinned subagent takeover — still
+  **not** the main session typing the diff. The orchestrator only reviews, runs
+  the pass gate, and commits. Strikes already accrued on a task carry across the
+  switch.
+- Review, verify bar, per-task commits: unchanged and **always** on the
+  orchestrator. The discipline is the point, not the executor.
 - If the trigger was the permission denial, suggest the user add
   `"Bash(codex exec:*)"` to `permissions.allow` in `~/.claude/settings.json`
   (user-level, holds across repos) — never edit that file yourself after a

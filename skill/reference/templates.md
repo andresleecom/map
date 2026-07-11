@@ -94,9 +94,9 @@ Verdict notes: use `sandbox-retry` when the Windows/sandbox fallback ran;
 use `takeover (opus-4.8)` or `takeover (grok-4.5)` when a pinned frontier
 subagent implemented after two strikes — never a silent main-session impl and
 **never Fable**;
-use `executor-switch (opus-4.8)` or `executor-switch (grok-4.5)` when codex was
-unavailable and packets went to the host-pinned fallback (Fable is not a valid
-executor label — stop instead of logging a fable switch).
+use `executor-switch (grok-4.5)` when Claude dispatched Grok CLI, or
+`executor-switch (opus-4.8)` for the last-resort Opus subagent (Fable is not a
+valid executor label — stop instead of logging a fable switch).
 
 ## `.map/GH-QUEUE.md` (only if a session denies external writes)
 

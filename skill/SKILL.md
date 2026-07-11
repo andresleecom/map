@@ -156,8 +156,9 @@ Also treat as fail / strike material (not pass):
 - REPORT says `done` while stderr shows sandbox death (re-dispatch as infrastructure, not pass).
 - Orchestrator verify bar fails even if Codex PROOF looks green.
 
-A quiet run does **not** count as hung: xhigh runs legitimately take up to ~30 min,
-and a `max` retry can run longer (allow roughly double); only treat it as hung after that.
+A quiet run does **not** count as hung: `high` runs usually finish in a few
+minutes; if you escalated effort, allow longer (~30 min for `xhigh`/`max`);
+only treat it as hung after that.
 
 A `blocked` REPORT usually means the packet was underspecified — that's a spec
 defect, not a codex defect. Fix the decision (record it in the MAP), then retry.
@@ -272,7 +273,7 @@ Default shape (Git Bash / macOS / Linux; prompt ALWAYS via file):
 
 ```bash
 command codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \
-  -m gpt-5.6-sol -c model_reasoning_effort=xhigh \
+  -m gpt-5.6-sol -c model_reasoning_effort=high \
   -C "<absolute repo path>" -o ".map/out/NN.md" - < ".map/tasks/NN-<slug>.md" 2>/dev/null
 ```
 
@@ -281,7 +282,7 @@ is known dead on this machine — see reference):
 
 ```bash
 command codex exec -s danger-full-access -c approval_policy=never --skip-git-repo-check \
-  -m gpt-5.6-sol -c model_reasoning_effort=xhigh \
+  -m gpt-5.6-sol -c model_reasoning_effort=high \
   -C "<absolute repo path>" -o ".map/out/NN.md" - < ".map/tasks/NN-<slug>.md" 2>/dev/null
 ```
 
@@ -293,15 +294,16 @@ command codex exec -s danger-full-access -c approval_policy=never --skip-git-rep
   instead of hanging — the file redirect is still mandatory.
 - `2>/dev/null` keeps thinking noise out of context; drop it only to debug a run.
 - `-m gpt-5.6-sol`: always pin the model — never ride the machine's config default.
-- `model_reasoning_effort`: never omit it. `xhigh` for implementation, `medium` for
-  trivial mechanical tasks and surveys, `max` for strike-1 retries of reasoning
-  failures. Never `ultra` in packets.
+- `model_reasoning_effort`: never omit it. House default **`high`** for
+  implementation, `medium` for trivial mechanical tasks and surveys, `xhigh` only
+  when quality needs more depth, `max` for strike-1 reasoning-failure retries.
+  Never `ultra` in packets.
 - Do **not** use `--yolo` / `--dangerously-bypass-approvals-and-sandbox` (blocked by
   restricted auto-mode classifiers). Prefer `-s workspace-write` first.
   `-s danger-full-access` is the documented Windows fallback only — it is a sandbox
   mode flag, not the long bypass flag.
-- Be patient: quiet runs under ~30 min are normal at xhigh. Parallel dispatches
-  need separate working dirs and separate `-o` files.
+- Be patient: quiet runs of a few minutes are normal at `high`; do not kill early.
+  Parallel dispatches need separate working dirs and separate `-o` files.
 
 ## Resume
 

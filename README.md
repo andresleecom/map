@@ -44,7 +44,8 @@ fine when the spec is frozen. `map` makes the split systematic:
   Sandbox spawn failures are **not** model strikes — they re-dispatch with a
   documented fallback. If codex is unavailable entirely, executor fallback is
   **Opus 4.8** on Claude Code (`model: claude-opus-4-8`) or **Grok 4.5**
-  subagents on Grok Build — never bulk impl in the orchestrator context.
+  subagents on Grok Build — never bulk impl in the orchestrator context, and
+  **never Fable** as the model that types product code.
 - **Hard rules.** Codex never touches git, never changes dependencies, never edits
   outside the packet's scope. Commits are yours — clean authorship, no AI attribution.
 - **Token discipline on the orchestrator side too.** Recon delegated to surveys,

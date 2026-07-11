@@ -221,7 +221,12 @@ Caveats, verified on 0.144 with real resumed runs:
    Claude Code's auto-mode command classifier (they bypass codex's sandbox, which
    the harness treats as unauthorized). Prefer `-s workspace-write
    -c approval_policy=never`. Use `-s danger-full-access` only as the documented
-   Windows fallback — not as a casual default.
+   Windows fallback — not as a casual default. Stricter permission modes can deny
+   even this sanctioned form — do not retry it with adjusted flags; one denial of
+   the plain dispatch → switch executors (SKILL.md, Executor fallback, which also
+   covers the settings remedy). The allowlist rule matches plain dispatches only:
+   the parenthesized resume form may still prompt, and if only resume is denied,
+   fall back to a fresh plain dispatch — not to another executor.
 3. **Non-fatal MCP auth noise.** A misconfigured MCP server in codex's own config
    (e.g. github-copilot) may print an auth error at startup. It does not affect the
    run — ignore it; don't burn a strike on it.
@@ -232,9 +237,14 @@ Caveats, verified on 0.144 with real resumed runs:
    `"C:/Users/Name With Spaces/..."`. Never use WSL bash for the Windows codex binary.
 6. **Windows sandbox spawn death: `CreateProcessAsUserW failed: 5` or `1312`.**
    Error **1312** is often transient (logon session). Error **5** (Access is denied)
-   can be persistent on a given machine. Neither is a model failure or a strike —
-   re-dispatch with `-s danger-full-access`. If concurrent codex instances make it
-   worse, stop them and retry solo.
+   can be persistent on a given machine. Neither is a model failure or a strike.
+   Run the orchestrator pass gate first — file edits can still succeed when shell
+   spawn fails. If the pass gate fails, re-dispatch once with
+   `-s danger-full-access`. If concurrent codex instances make it worse, stop them
+   and retry solo. If every spawn still fails after the fallback (or the host
+   cannot run codex at all), stop re-dispatching and switch executors
+   (SKILL.md, Executor fallback).
+
 7. **Sandbox network is asymmetric.** localhost TCP (a local Postgres, a dev
    server) tends to work inside `workspace-write`; external HTTPS (Gradle plugin
    portals, package registries) gets blocked or TLS-broken (`PKIX path building

@@ -112,6 +112,12 @@ For each task, in order (parallel only if tasks are provably file-disjoint, max 
    (include `sandbox-retry` in the verdict when the Windows/sandbox fallback ran).
 6. On fail → Failure protocol.
 
+If the session denies an external write along the way (gh labels, issue comments,
+anything outward-facing), queue the exact command verbatim in `.map/GH-QUEUE.md`
+(template in `reference/templates.md`), commit it with the task's commit so it
+travels with the branch, and move on — reconcile later instead of blocking the
+loop. Drained in Phase 3.
+
 ## Failure protocol — two strikes
 
 **Sandbox / infrastructure failures are not model strikes.**
@@ -122,12 +128,15 @@ orchestrator verify green), accept the task and log a note — do not re-dispatc
 If the pass gate fails, re-dispatch once with the sandbox fallback from
 `reference/codex-invocation.md` (`-s danger-full-access`).
 Do not increment the strike counter for that retry.
-If the fallback also cannot run, take over in the orchestrator and log why.
+If the fallback also cannot run, switch executors (see Executor fallback) or
+take over in the orchestrator and log why.
 
 **Model / quality failures use two strikes:**
 
-- **Strike 1**: revert the working tree to the last commit (`git checkout -- .` +
-  `git clean -fd` scoped to affected paths). Re-dispatch with a sharpened packet —
+- **Strike 1**: revert the task's changes to the last commit
+  (`git checkout -- <task paths>` + `git clean -fd <task paths>`; never touch
+  `.map/` — it holds uncommitted decisions and the queue). Re-dispatch with a
+  sharpened packet —
   written to `.map/tasks/NN-<slug>-r2.md`, keeping the original for the audit
   trail — that names the exact defect ("your change broke X because Y; the fix
   must Z") and adds the missing context. If the failure was one of reasoning
@@ -150,8 +159,39 @@ and a `max` retry can run longer (allow roughly double); only treat it as hung a
 A `blocked` REPORT usually means the packet was underspecified — that's a spec
 defect, not a codex defect. Fix the decision (record it in the MAP), then retry.
 
-Optional last resort when Codex cannot run at all: implement via a session
-subagent under the same packet HARD RULES, then still run the full pass gate.
+## Executor fallback — when codex is unavailable
+
+Strikes are per task. This is different: codex can't run at all this session —
+the permission classifier denies the plain `codex exec` dispatch, or the sandbox
+fails every spawn even after a solo retry and the documented
+`danger-full-access` fallback (reference, gotchas 2 and 6). The MAP
+survives; only the executor changes.
+
+- A permission denial is a routing decision, not a flag problem. Swapping a
+  blocked bypass flag (`--yolo`) for the sanctioned sandboxed form is fine;
+  **never vary the sanctioned form after it is denied** — that reads as a
+  bypass attempt. One denial of the plain dispatch → switch executors. (If only
+  the subshell resume form is denied, codex is still available — retry as a
+  fresh plain dispatch instead.)
+- Record the switch as a numbered decision in `.map/PLAN.md`.
+- Dispatch the same packets to Claude subagents (general-purpose) instead. The
+  packet and contract hold, REPORT format included; only the codex invocation
+  disappears — the subagent reads the packet file and returns its REPORT as its
+  result. Save that REPORT to `.map/out/NN.md` to keep the audit trail.
+  Subagent tokens cost more than codex's, but the bulk reading and generation
+  still stay out of the main context — the MAP's economics degrade, they don't
+  invert.
+- The failure protocol applies minus the codex mechanics: a strike-1 retry is a
+  fresh subagent with the sharpened `-r2` packet (no resume, no effort
+  escalation), strike 2 stays a main-context takeover, and strikes already
+  accrued on a task carry across the switch.
+- Review, verify bar, per-task commits: unchanged. The discipline is the point,
+  not the executor.
+- If the trigger was the permission denial, suggest the user add
+  `"Bash(codex exec:*)"` to `permissions.allow` in `~/.claude/settings.json`
+  (user-level, holds across repos) — never edit that file yourself after a
+  denial. Persistent sandbox spawn death (gotcha 6) has no settings fix after
+  `danger-full-access` has already been tried.
 
 ## Phase 3 — Close
 
@@ -159,9 +199,12 @@ subagent under the same packet HARD RULES, then still run the full pass gate.
    not yet reviewed at task level). Prefer the host's review skill (`/review` or
    equivalent) on the branch when available.
 2. Run the full verify bar for the plan (build + tests + flows named in the MAP).
-3. Final commit removes `.map/` (`git rm -r .map`) so the PR is clean.
-4. Report to the user: what shipped, task-by-task verdicts, strikes/takeovers,
-   sandbox retries, commits, and anything deliberately left out.
+3. Drain `.map/GH-QUEUE.md` if present: run the queued commands, or — if the
+   session still can't — paste them verbatim into the step-5 report (and the PR
+   description, if one exists) so they survive the next step.
+4. Final commit removes `.map/` (`git rm -r .map`) so the PR is clean.
+5. Report to the user: what shipped, task-by-task verdicts, strikes/takeovers,
+   sandbox retries, executor switches, commits, and anything deliberately left out.
 
 ## The codex contract (include verbatim in every packet)
 

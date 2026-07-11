@@ -91,7 +91,21 @@ HARD RULES — violating any of these means your work is discarded:
 ```
 
 Verdict notes: use `sandbox-retry` when the Windows/sandbox fallback ran;
-use `takeover` when the orchestrator implemented the task after two strikes.
+use `takeover` when the orchestrator implemented the task after two strikes;
+use `executor-switch` when the MAP moved from codex to session subagents.
+
+## `.map/GH-QUEUE.md` (only if a session denies external writes)
+
+```markdown
+# GH queue: external writes denied this session — run verbatim to reconcile
+
+gh issue edit 42 --add-label wip
+gh issue comment 42 --body "Verified: <what was checked, residual risks>"
+```
+
+One ready-to-paste command per line, exact arguments. Committed with the task's
+commit; drained (run or handed to the user) in Phase 3 before `.map/` is removed.
+
 
 ## `.map/.gitignore`
 

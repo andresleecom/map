@@ -74,6 +74,18 @@ in place.
 On Windows, invoke codex from **Git Bash** (`C:\Program Files\Git\bin\bash.exe`),
 not WSL bash.
 
+Under a restricted Claude Code permission mode, the command classifier may deny
+`codex exec` dispatches outright (the skill then falls back to Claude subagents —
+see SKILL.md's Executor fallback). To keep codex-based execution available, add
+`"Bash(codex exec:*)"` to the `permissions.allow` array in
+`~/.claude/settings.json` — merge into your existing file (or use
+`/permissions`); the entry's shape:
+
+```json
+{ "permissions": { "allow": ["Bash(codex exec:*)"] } }
+```
+
+
 ## Use
 
 ```

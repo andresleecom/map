@@ -31,6 +31,9 @@ Copy these shapes; keep them compact. The MAP ≤ ~150 lines, packets ≤ ~60.
 
 Bar legend: build = diff review + build/typecheck · +tests = also relevant tests ·
 +flow = also drive the affected flow.
+
+Status values: `pending` · `done` · `blocked` · `takeover`.
+Update Status in the same commit as the verified task (or the immediate log commit).
 ```
 
 ## `.map/tasks/NN-<slug>.md` (the packet)
@@ -82,9 +85,13 @@ HARD RULES — violating any of these means your work is discarded:
 | # | Task | Strikes | Verdict | Commit |
 |---|------|---------|---------|--------|
 | 01 | <task> | 0 | pass | <sha> |
-| 02 | <task> | 1 | pass (retry: <defect named>) | <sha> |
-| 03 | <task> | 2 | takeover (<why codex failed>) | <sha> |
+| 02 | <task> | 0 | pass (sandbox-retry) | <sha> |
+| 03 | <task> | 1 | pass (retry: <defect named>) | <sha> |
+| 04 | <task> | 2 | takeover (<why codex failed>) | <sha> |
 ```
+
+Verdict notes: use `sandbox-retry` when the Windows/sandbox fallback ran;
+use `takeover` when the orchestrator implemented the task after two strikes.
 
 ## `.map/.gitignore`
 

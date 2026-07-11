@@ -7,16 +7,17 @@ description: "MAP — Massive Action Plan. Claude plans, interviews, and verifie
 
 Claude thinks. Codex types. Claude verifies. Nothing merges unreviewed.
 
+**Host rule:** MAP is for an orchestrator session (Claude Code, Grok, etc.) that can run git, review diffs, and invoke `codex exec`.
+If you are already inside Codex (or another pure executor harness), do **not** self-delegate — implement or hand back to the orchestrator.
+
 ## Why this exists
 
-The session model (Claude) is the expensive, high-judgment resource. Codex CLI
-running GPT-5.6-Sol is the cheap, tireless executor. A MAP converts a vague request
-into a frozen, verifiable plan (where Claude's tokens are worth spending), then
-drains execution tokens into codex (where they're nearly free). Success = Claude's
-context holds decisions, specs, and diffs — never bulk code generation or bulk
-file reading.
+The session model is the expensive, high-judgment resource.
+Codex CLI running GPT-5.6-Sol is the cheap, tireless executor.
+A MAP converts a vague request into a frozen, verifiable plan (where judgment tokens are worth spending), then drains execution tokens into codex (where they're nearly free).
+Success = the orchestrator's context holds decisions, specs, and diffs — never bulk code generation or bulk file reading.
 
-## Token discipline (binding rules for Claude)
+## Token discipline (binding rules for the orchestrator)
 
 1. **Never bulk-read to "understand".** Read only what's needed to write the packet.
    For wide recon, dispatch a read-only codex survey (see Invocation) or an Explore
@@ -27,10 +28,17 @@ file reading.
    changed. Never re-read whole files a diff already shows.
 4. **Read codex output by its REPORT.** Every packet requires codex to end with a
    `## REPORT` section (≤40 lines). Read that; open the full log only on failure.
+   Codex PROOF is **advisory** — never trust it alone.
+   Do **not** parse the JSONL session stream for results (session logs are only for
+   finding a `session-id` on resume).
 5. **Compact artifacts.** MAP ≤ ~150 lines. Packets ≤ ~60 lines. Batch interview
    questions (≤4 per round, as few rounds as the tier needs).
 
 ## Triage — decide before doing anything
+
+**Heuristic:** if the request already reads as a work order with frozen decisions →
+delegate; if writing the packet forces design choices → keep design in the
+orchestrator, freeze decisions, then delegate build-out.
 
 **Route to codex** (execution):
 - Implementation from a locked spec; the design decisions are already made
@@ -40,12 +48,15 @@ file reading.
 - Bulk edits across many files; scaffolding from an established pattern
 - Read-only surveys of large codebases (recon packets)
 
-**Keep in Claude** (judgment):
+**Keep in the orchestrator** (judgment):
 - Design, API shape, naming, UX decisions — anywhere the spec IS the work
 - Tiny edits (<~20 lines, obvious) — packet overhead exceeds the task
 - Anything needing session tools: MCP servers, secrets, authenticated services
 - All git operations, releases, deploys, destructive commands
 - **All review and verification — never delegated, no exceptions**
+
+**Multi-repo / portfolio work:** do not stuff multiple repos into one MAP.
+Orchestrate outside (one MAP per repo, or a higher-level plan).
 
 **Pick a tier and announce it:**
 - **S** — clear scope, ≤2 tasks: write the packet(s) directly, no interview.
@@ -53,8 +64,8 @@ file reading.
 - **L** — significant scope: recon first, multi-round interview, decision
   register, phased task list. (Recon itself can be a codex survey packet.)
 
-If the user typed `/map <task>`, triage that task. If Claude is suggesting MAP
-on its own, ask first: "This fits /map — plan here, execute on codex. Run it?"
+If the user typed `/map <task>`, triage that task.
+If suggesting MAP on its own, ask first: "This fits /map — plan here, execute on codex. Run it?"
 
 ## Phase 1 — Plan
 
@@ -77,20 +88,43 @@ For each task, in order (parallel only if tasks are provably file-disjoint, max 
 1. **Packet**: write `.map/tasks/NN-<slug>.md` from the packet template. Include the
    contract (below) verbatim.
 2. **Dispatch** codex in the background (see Invocation), output to
-   `.map/out/NN.md`.
-3. **Verify** when it returns — this is Claude acting as a hostile code reviewer:
-   - `git status -sb` + `git diff --stat`: only in-scope files changed?
-   - Read the per-file diffs. Judge correctness, style fit, scope creep.
-   - Run the task's verify bar (from the MAP):
-     - every task: build/typecheck
-     - behavior-touching: + relevant tests
-     - user-facing: + actually drive the affected flow
-4. **Commit** on pass: Claude writes the commit, user's authorship, clean
+   `.map/out/NN.md`. Start with the default sandbox. If sandbox spawn death
+   appears in stderr **and** the pass gate below would fail, re-dispatch with the
+   documented fallback (not a model strike — see Failure protocol). If the pass
+   gate is already green despite sandbox noise, do not re-dispatch — proceed.
+3. **Verify** when it returns — hostile code review with a hard pass gate.
+   A task **passes only if all three hold**:
+   1. REPORT has `STATUS: done` (and a real REPORT section exists).
+   2. `git status -sb` + `git diff --stat` show only in-scope files changed;
+      for an implementation task the diff must not be empty unless the packet
+      explicitly allowed a no-op.
+   3. The **orchestrator** re-runs the task's verify bar and it passes:
+      - every task: build/typecheck
+      - behavior-touching: + relevant tests
+      - user-facing: + actually drive the affected flow
+   Also judge correctness, style fit, and scope creep from the per-file diffs.
+   Codex PROOF alone never counts as a pass.
+4. **Commit** on pass: orchestrator writes the commit, user's authorship, clean
    conventional message. **Never any AI attribution.** One commit per verified task.
-5. **Log** one line to `.map/LOG.md`: task, strikes used, verdict, commit sha.
+   In that same commit (or an immediate follow-up): set the task's Status in
+   `.map/PLAN.md` to `done` and append the LOG line.
+5. **Log** one line to `.map/LOG.md`: task, strikes used, verdict, commit sha
+   (include `sandbox-retry` in the verdict when the Windows/sandbox fallback ran).
 6. On fail → Failure protocol.
 
 ## Failure protocol — two strikes
+
+**Sandbox / infrastructure failures are not model strikes.**
+If stderr or the REPORT shows `CreateProcessAsUserW failed`, Windows sandbox
+spawn death (error **5** or **1312**), or the run did zero work because the shell
+could not start: run the pass gate first. If it already passes (in-scope diff +
+orchestrator verify green), accept the task and log a note — do not re-dispatch.
+If the pass gate fails, re-dispatch once with the sandbox fallback from
+`reference/codex-invocation.md` (`-s danger-full-access`).
+Do not increment the strike counter for that retry.
+If the fallback also cannot run, take over in the orchestrator and log why.
+
+**Model / quality failures use two strikes:**
 
 - **Strike 1**: revert the working tree to the last commit (`git checkout -- .` +
   `git clean -fd` scoped to affected paths). Re-dispatch with a sharpened packet —
@@ -101,22 +135,33 @@ For each task, in order (parallel only if tasks are provably file-disjoint, max 
   `codex exec resume <session-id>` for the retry — it keeps codex's session
   context and is cheaper than a fresh run — but resume takes different flags and
   forgets the model unless re-pinned (see reference).
-- **Strike 2**: Claude implements the task itself. Log the takeover and why —
+- **Strike 2**: the orchestrator implements the task itself. Log the takeover and why —
   patterns in the log teach what not to delegate next time.
-- A run that exits without a REPORT counts as a strike. A quiet run does NOT —
-  xhigh runs legitimately take up to ~30 min, and a `max` retry can run longer
-  (allow roughly double); only treat it as hung after that.
-- A `blocked` REPORT usually means the packet was underspecified — that's a spec
-  defect, not a codex defect. Fix the decision (record it in the MAP), then retry.
+
+Also treat as fail / strike material (not pass):
+- Run exits without a REPORT.
+- REPORT says `done` but the implementation diff is empty when work was required.
+- REPORT says `done` while stderr shows sandbox death (re-dispatch as infrastructure, not pass).
+- Orchestrator verify bar fails even if Codex PROOF looks green.
+
+A quiet run does **not** count as hung: xhigh runs legitimately take up to ~30 min,
+and a `max` retry can run longer (allow roughly double); only treat it as hung after that.
+
+A `blocked` REPORT usually means the packet was underspecified — that's a spec
+defect, not a codex defect. Fix the decision (record it in the MAP), then retry.
+
+Optional last resort when Codex cannot run at all: implement via a session
+subagent under the same packet HARD RULES, then still run the full pass gate.
 
 ## Phase 3 — Close
 
 1. Review the whole branch diff once (`git diff <base>...HEAD --stat`, then anything
-   not yet reviewed at task level).
+   not yet reviewed at task level). Prefer the host's review skill (`/review` or
+   equivalent) on the branch when available.
 2. Run the full verify bar for the plan (build + tests + flows named in the MAP).
 3. Final commit removes `.map/` (`git rm -r .map`) so the PR is clean.
 4. Report to the user: what shipped, task-by-task verdicts, strikes/takeovers,
-   commits, and anything deliberately left out.
+   sandbox retries, commits, and anything deliberately left out.
 
 ## The codex contract (include verbatim in every packet)
 
@@ -137,32 +182,46 @@ HARD RULES — violating any of these means your work is discarded:
 
 ## Invocation
 
-Full command reference, flags, and known gotchas: `reference/codex-invocation.md`.
-The battle-tested shape (Git Bash, run in background, prompt ALWAYS via file):
+Full command reference, flags, sandbox fallback, and known gotchas:
+`reference/codex-invocation.md`.
+
+Default shape (Git Bash / macOS / Linux; prompt ALWAYS via file):
 
 ```bash
-codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \
+command codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \
   -m gpt-5.6-sol -c model_reasoning_effort=xhigh \
   -C "<absolute repo path>" -o ".map/out/NN.md" - < ".map/tasks/NN-<slug>.md" 2>/dev/null
 ```
 
-- stdin **must** be closed or redirected (`- < file`) — codex waits on stdin
-  forever otherwise. Never pass the prompt inline (audit trail + arg-length limits).
+Windows sandbox fallback (after sandbox spawn death, or when `workspace-write`
+is known dead on this machine — see reference):
+
+```bash
+command codex exec -s danger-full-access -c approval_policy=never --skip-git-repo-check \
+  -m gpt-5.6-sol -c model_reasoning_effort=xhigh \
+  -C "<absolute repo path>" -o ".map/out/NN.md" - < ".map/tasks/NN-<slug>.md" 2>/dev/null
+```
+
+- `command codex` bypasses shell aliases/wrappers. If `codex` is missing from PATH
+  under fnm/nvm, see the reference for recovery.
+- On Windows, run under **Git Bash** (`"C:/Program Files/Git/bin/bash.exe"`), never WSL bash.
+- stdin **must** be closed or redirected (`- < file`). Always pass the prompt via file
+  (audit trail + arg-length limits). Some non-TTY hosts exit with "No prompt provided"
+  instead of hanging — the file redirect is still mandatory.
 - `2>/dev/null` keeps thinking noise out of context; drop it only to debug a run.
 - `-m gpt-5.6-sol`: always pin the model — never ride the machine's config default.
-- `model_reasoning_effort`: never omit it — unpinned, it falls back to machine
-  config or Sol's `low` catalog default. `xhigh` for implementation, `medium` for
+- `model_reasoning_effort`: never omit it. `xhigh` for implementation, `medium` for
   trivial mechanical tasks and surveys, `max` for strike-1 retries of reasoning
-  failures. Never `ultra` in packets — it delegates sub-tasks on its own (see
-  reference for why that loses).
-- Do **not** use `--yolo` / `--dangerously-bypass-approvals-and-sandbox` (blocked
-  by restricted auto-mode classifiers, and they disable codex's own sandbox — a
-  layer the hard-rules contract relies on). The flags above are the working
-  equivalent.
+  failures. Never `ultra` in packets.
+- Do **not** use `--yolo` / `--dangerously-bypass-approvals-and-sandbox` (blocked by
+  restricted auto-mode classifiers). Prefer `-s workspace-write` first.
+  `-s danger-full-access` is the documented Windows fallback only — it is a sandbox
+  mode flag, not the long bypass flag.
 - Be patient: quiet runs under ~30 min are normal at xhigh. Parallel dispatches
   need separate working dirs and separate `-o` files.
 
 ## Resume
 
-If `.map/PLAN.md` exists on the current branch, a MAP is in flight. Read `PLAN.md`
-and `LOG.md`, announce where it stands, and continue from the next incomplete task.
+If `.map/PLAN.md` exists on the current branch, a MAP is in flight.
+Read `PLAN.md` and `LOG.md`, announce where it stands (call out PLAN/LOG drift),
+and continue from the next incomplete task.

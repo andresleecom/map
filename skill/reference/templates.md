@@ -91,10 +91,10 @@ HARD RULES — violating any of these means your work is discarded:
 ```
 
 Verdict notes: use `sandbox-retry` when the Windows/sandbox fallback ran;
-use `takeover (opus)` when a pinned Opus (or host) subagent implemented after
-two strikes — never a silent main-session impl;
-use `executor-switch (opus)` when codex was unavailable and packets went to the
-pinned Opus subagent (or `executor-switch (grok-subagent)` on Grok Build).
+use `takeover (opus-4.8)` or `takeover (grok-4.5)` when a pinned frontier
+subagent implemented after two strikes — never a silent main-session impl;
+use `executor-switch (opus-4.8)` or `executor-switch (grok-4.5)` when codex was
+unavailable and packets went to the host-pinned fallback.
 
 ## `.map/GH-QUEUE.md` (only if a session denies external writes)
 

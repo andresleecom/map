@@ -145,10 +145,10 @@ take over in the orchestrator and log why.
   context and is cheaper than a fresh run — but resume takes different flags and
   forgets the model unless re-pinned (see reference).
 - **Strike 2**: do **not** implement in the main session thread. Dispatch a
-  takeover packet to the pinned fallback executor (Claude Code: Opus
-  general-purpose subagent; see Executor fallback). Orchestrator still runs the
-  pass gate and commits. Log the takeover and why — patterns in the log teach
-  what not to delegate next time.
+  takeover packet to the pinned fallback executor (Claude Code: Opus 4.8
+  subagent; Grok Build: Grok 4.5 subagent — see Executor fallback). Orchestrator
+  still runs the pass gate and commits. Log the takeover and why — patterns in
+  the log teach what not to delegate next time.
 
 Also treat as fail / strike material (not pass):
 - Run exits without a REPORT.
@@ -179,10 +179,16 @@ Fallback execution always goes to a **pinned frontier subagent**.
 
 ### Pinned fallback executor
 
-| Host | How to dispatch the packet |
-|------|----------------------------|
-| **Claude Code** | Agent/Task tool: `subagent_type=general-purpose`, **`model: opus`** (or the current Opus full id if the host requires it). **Never** omit `model` (inherit would steal the session model). **Never** use haiku/sonnet for executor fallback. |
-| **Grok Build** | `spawn_subagent` with `subagent_type=general-purpose` (host has no Opus pin; use the general-purpose agent, not the main Grok thread). |
+House pins (update when a new frontier ships; do not drift to mid-tier models):
+
+| Host | Fallback model | How to dispatch |
+|------|----------------|-----------------|
+| **Claude Code** | **Opus 4.8** | Agent/Task: `subagent_type=general-purpose`, **`model: claude-opus-4-8`** (alias `opus` is OK only if the host docs still resolve it to 4.8). **Never** omit `model` (inherit steals Fable/Sonnet/session). **Never** haiku/sonnet/fable for this path. |
+| **Grok Build** | **Grok 4.5** | `spawn_subagent` with `subagent_type=general-purpose` — runs on the Grok Build agent stack (Grok 4.5 class). **Not** the main chat thread. There is no separate model flag; the pin is “subagent, not parent.” |
+
+Prefer **Codex (gpt-5.6-sol)** whenever it can run. Fallback is only when codex is
+unavailable. Do not mix hosts mid-MAP: Claude Code sessions fall back to Opus 4.8;
+Grok sessions fall back to Grok 4.5 subagents — not the other way around.
 
 - A permission denial is a routing decision, not a flag problem. Swapping a
   blocked bypass flag (`--yolo`) for the sanctioned sandboxed form is fine;
@@ -191,18 +197,19 @@ Fallback execution always goes to a **pinned frontier subagent**.
   the subshell resume form is denied, codex is still available — retry as a
   fresh plain dispatch instead.)
 - Record the switch as a numbered decision in `.map/PLAN.md`
-  (e.g. `Dxx Executor = Opus subagent — codex denied by auto-mode classifier`).
+  (e.g. `Dxx Executor = Opus 4.8 subagent — codex denied by auto-mode classifier`
+  or `Dxx Executor = Grok 4.5 subagent — codex unavailable`).
 - Dispatch the **same packets** to the pinned subagent. The packet and HARD
   RULES contract hold, REPORT format included; only the codex CLI invocation
   disappears — the subagent reads the packet file and returns its REPORT as its
   result. Save that REPORT to `.map/out/NN.md` to keep the audit trail.
-  Log the task verdict with `executor-switch (opus)` (or `executor-switch (grok-subagent)`).
+  Log with `executor-switch (opus-4.8)` or `executor-switch (grok-4.5)`.
 - The failure protocol applies minus the codex mechanics: a strike-1 retry is a
-  **fresh Opus subagent** with the sharpened `-r2` packet (no codex resume, no
-  effort escalation). Strike 2 is **also** an Opus (or host-pinned) subagent
-  takeover with a takeover packet — still **not** the main session typing the
-  diff. The orchestrator only reviews, runs the pass gate, and commits.
-  Strikes already accrued on a task carry across the switch.
+  **fresh pinned subagent** with the sharpened `-r2` packet (no codex resume, no
+  effort escalation). Strike 2 is **also** a pinned subagent takeover — still
+  **not** the main session typing the diff. The orchestrator only reviews, runs
+  the pass gate, and commits. Strikes already accrued on a task carry across the
+  switch.
 - Review, verify bar, per-task commits: unchanged and **always** on the
   orchestrator. The discipline is the point, not the executor.
 - If the trigger was the permission denial, suggest the user add

@@ -109,7 +109,8 @@ needing session tools or secrets, destructive operations, all git, and **all rev
 skill/
   SKILL.md                      # the skill — flow, rules, contract
   reference/
-    codex-invocation.md         # battle-tested flags + the gotchas that cost hours
+    codex-invocation.md         # Codex CLI flags + sandbox gotchas
+    grok-invocation.md          # Grok Build host: shells, spawn_subagent fallback
     templates.md                # PLAN / task packet / log templates
 install.sh · install.ps1
 ```

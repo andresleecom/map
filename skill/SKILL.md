@@ -200,7 +200,7 @@ House pins (update when a new frontier ships; do not drift to mid-tier models):
 | Host | Fallback model | How to dispatch |
 |------|----------------|-----------------|
 | **Claude Code** | **Opus 4.8 only** | Agent/Task: `subagent_type=general-purpose`, **`model: claude-opus-4-8`** (required). Alias `opus` only if host docs still resolve it to 4.8 — prefer the full id. **Never** omit `model`. **Never** `fable` / `sonnet` / `haiku` / inherit. |
-| **Grok Build** | **Grok 4.5** | `spawn_subagent` with `subagent_type=general-purpose` — Grok 4.5 agent stack. **Not** the main chat thread. |
+| **Grok Build** | **Grok 4.5** | `spawn_subagent` with `subagent_type=general-purpose` — Grok 4.5 agent stack. **Not** the main chat thread. See `reference/grok-invocation.md`. |
 
 Prefer **Codex (gpt-5.6-sol)** whenever it can run. Fallback is only when codex is
 unavailable. Do not mix hosts mid-MAP: Claude Code sessions fall back to Opus 4.8;
@@ -268,6 +268,10 @@ HARD RULES — violating any of these means your work is discarded:
 
 Full command reference, flags, sandbox fallback, and known gotchas:
 `reference/codex-invocation.md`.
+
+When the **orchestrator host is Grok Build** (shells, background dispatch,
+`spawn_subagent` fallback, PowerShell/`codex.cmd`): also read
+`reference/grok-invocation.md`. Codex flags stay the same; only the host glue differs.
 
 Default shape (Git Bash / macOS / Linux; prompt ALWAYS via file):
 

@@ -144,8 +144,11 @@ take over in the orchestrator and log why.
   `codex exec resume <session-id>` for the retry — it keeps codex's session
   context and is cheaper than a fresh run — but resume takes different flags and
   forgets the model unless re-pinned (see reference).
-- **Strike 2**: the orchestrator implements the task itself. Log the takeover and why —
-  patterns in the log teach what not to delegate next time.
+- **Strike 2**: do **not** implement in the main session thread. Dispatch a
+  takeover packet to the pinned fallback executor (Claude Code: Opus
+  general-purpose subagent; see Executor fallback). Orchestrator still runs the
+  pass gate and commits. Log the takeover and why — patterns in the log teach
+  what not to delegate next time.
 
 Also treat as fail / strike material (not pass):
 - Run exits without a REPORT.
@@ -167,26 +170,41 @@ fails every spawn even after a solo retry and the documented
 `danger-full-access` fallback (reference, gotchas 2 and 6). The MAP
 survives; only the executor changes.
 
+### Hard rule: never dump implementation into the main session
+
+When codex is unavailable, **do not** implement the packet in the orchestrator
+thread (even if that thread is already Opus, Sonnet, Fable, or Grok).
+Bulk generation in the main context is exactly what MAP exists to avoid.
+Fallback execution always goes to a **pinned frontier subagent**.
+
+### Pinned fallback executor
+
+| Host | How to dispatch the packet |
+|------|----------------------------|
+| **Claude Code** | Agent/Task tool: `subagent_type=general-purpose`, **`model: opus`** (or the current Opus full id if the host requires it). **Never** omit `model` (inherit would steal the session model). **Never** use haiku/sonnet for executor fallback. |
+| **Grok Build** | `spawn_subagent` with `subagent_type=general-purpose` (host has no Opus pin; use the general-purpose agent, not the main Grok thread). |
+
 - A permission denial is a routing decision, not a flag problem. Swapping a
   blocked bypass flag (`--yolo`) for the sanctioned sandboxed form is fine;
   **never vary the sanctioned form after it is denied** — that reads as a
   bypass attempt. One denial of the plain dispatch → switch executors. (If only
   the subshell resume form is denied, codex is still available — retry as a
   fresh plain dispatch instead.)
-- Record the switch as a numbered decision in `.map/PLAN.md`.
-- Dispatch the same packets to Claude subagents (general-purpose) instead. The
-  packet and contract hold, REPORT format included; only the codex invocation
+- Record the switch as a numbered decision in `.map/PLAN.md`
+  (e.g. `Dxx Executor = Opus subagent — codex denied by auto-mode classifier`).
+- Dispatch the **same packets** to the pinned subagent. The packet and HARD
+  RULES contract hold, REPORT format included; only the codex CLI invocation
   disappears — the subagent reads the packet file and returns its REPORT as its
   result. Save that REPORT to `.map/out/NN.md` to keep the audit trail.
-  Subagent tokens cost more than codex's, but the bulk reading and generation
-  still stay out of the main context — the MAP's economics degrade, they don't
-  invert.
+  Log the task verdict with `executor-switch (opus)` (or `executor-switch (grok-subagent)`).
 - The failure protocol applies minus the codex mechanics: a strike-1 retry is a
-  fresh subagent with the sharpened `-r2` packet (no resume, no effort
-  escalation), strike 2 stays a main-context takeover, and strikes already
-  accrued on a task carry across the switch.
-- Review, verify bar, per-task commits: unchanged. The discipline is the point,
-  not the executor.
+  **fresh Opus subagent** with the sharpened `-r2` packet (no codex resume, no
+  effort escalation). Strike 2 is **also** an Opus (or host-pinned) subagent
+  takeover with a takeover packet — still **not** the main session typing the
+  diff. The orchestrator only reviews, runs the pass gate, and commits.
+  Strikes already accrued on a task carry across the switch.
+- Review, verify bar, per-task commits: unchanged and **always** on the
+  orchestrator. The discipline is the point, not the executor.
 - If the trigger was the permission denial, suggest the user add
   `"Bash(codex exec:*)"` to `permissions.allow` in `~/.claude/settings.json`
   (user-level, holds across repos) — never edit that file yourself after a

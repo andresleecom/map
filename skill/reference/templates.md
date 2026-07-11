@@ -91,8 +91,10 @@ HARD RULES — violating any of these means your work is discarded:
 ```
 
 Verdict notes: use `sandbox-retry` when the Windows/sandbox fallback ran;
-use `takeover` when the orchestrator implemented the task after two strikes;
-use `executor-switch` when the MAP moved from codex to session subagents.
+use `takeover (opus)` when a pinned Opus (or host) subagent implemented after
+two strikes — never a silent main-session impl;
+use `executor-switch (opus)` when codex was unavailable and packets went to the
+pinned Opus subagent (or `executor-switch (grok-subagent)` on Grok Build).
 
 ## `.map/GH-QUEUE.md` (only if a session denies external writes)
 

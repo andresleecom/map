@@ -37,7 +37,7 @@ command grok \
   -m grok-4.5 \
   --reasoning-effort high \
   --yolo \
-  --disallowed-tools "Agent" \
+  --no-subagents \
   --deny "Bash(git*)" \
   --deny "Bash(*git *)" \
   --output-format plain \
@@ -55,7 +55,7 @@ $repo = "C:\Users\Name\IdeaProjects\repo"
   -m grok-4.5 `
   --reasoning-effort high `
   --yolo `
-  --disallowed-tools "Agent" `
+  --no-subagents `
   --deny "Bash(git*)" `
   --output-format plain `
   > "$repo\.map\out\01.md" `
@@ -71,7 +71,7 @@ $repo = "C:\Users\Name\IdeaProjects\repo"
 | `-m grok-4.5` | House pin for MAP fallback (frontier). Do not omit (avoids weaker defaults). `grok-build` is the product default agent profile name in some docs — for MAP pin **`grok-4.5`**. |
 | `--reasoning-effort high` | Aligns with Codex house effort default (speed). Escalate only if quality fails. |
 | `--yolo` / `--always-approve` | Required for unattended headless (auto-approve tools). **Scoped by packet HARD RULES + denylists below.** |
-| `--disallowed-tools "Agent"` | Blocks Grok from spawning its own subagent fan-out (MAP owns parallelism). |
+| `--no-subagents` | Blocks Grok from spawning its own subagent fan-out (MAP owns parallelism). **Use this, not `--disallowed-tools "Agent"`** (see gotcha). |
 | `--deny "Bash(git*)"` | Reinforces HARD RULES: no git from the executor. |
 | stdout → `.map/out/NN.md` | Audit trail + REPORT capture (Grok prints the final message to stdout). |
 
@@ -119,8 +119,8 @@ MAP audit). If you must resume:
 ```bash
 # capture sessionId from a prior --output-format json run if needed
 command grok --prompt-file ".map/tasks/NN-slug-r2.md" --cwd "<repo>" \
-  -m grok-4.5 --reasoning-effort high --yolo \
-  --disallowed-tools "Agent" --deny "Bash(git*)" \
+  -m grok-4.5 --reasoning-effort high --yolo --no-subagents \
+  --deny "Bash(git*)" \
   -r "<session-id>" > ".map/out/NN-r2.md" 2> ".map/out/NN-r2.stderr.log"
 ```
 
@@ -155,17 +155,22 @@ Or per-task override:
    path, or use PowerShell. Mixing WSL paths with a Windows binary fails.
 5. **Model pin:** use `-m grok-4.5` explicitly for MAP so a machine default of
    composer/fast models does not steal the run.
-6. **Nested MAP:** the Grok process may load skills; packet HARD RULES still win.
-   Prefer `--disallowed-tools "Agent"` so Grok does not open its own multi-agent
-   storm on a single packet.
+6. **`--disallowed-tools "Agent"` breaks agent building (Grok 0.2.93, verified).**
+   Error looks like:
+   `agent building failed: ... auto_background_on_timeout requires enabled_background to be true`.
+   That is **not** a model strike and **not** a packet defect. Re-dispatch with
+   **`--no-subagents`** instead (same intent: no executor fan-out). Do not thrash
+   other flags first.
+7. **Nested multi-agent:** `--no-subagents` keeps MAP owning parallelism. Packet
+   HARD RULES still win even if skills load inside Grok.
 
 ## Minimal smoke (Claude session)
 
 ```bash
 command grok --version
 command grok --prompt-file ".map/tasks/01-smoke.md" --cwd "$PWD" \
-  -m grok-4.5 --reasoning-effort high --yolo \
-  --disallowed-tools "Agent" --deny "Bash(git*)" \
+  -m grok-4.5 --reasoning-effort high --yolo --no-subagents \
+  --deny "Bash(git*)" \
   > ".map/out/01.md" 2> ".map/out/01.stderr.log"
 # then: pass gate + commit as MAP
 ```

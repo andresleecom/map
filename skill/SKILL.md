@@ -163,20 +163,26 @@ only treat it as hung after that.
 A `blocked` REPORT usually means the packet was underspecified — that's a spec
 defect, not a codex defect. Fix the decision (record it in the MAP), then retry.
 
-## Executor fallback — when codex is unavailable
+## Executor chain — codex, then Grok CLI, then Opus
 
-Strikes are per task. This is different: codex can't run at all this session —
-the permission classifier denies the plain `codex exec` dispatch, or the sandbox
-fails every spawn even after a solo retry and the documented
-`danger-full-access` fallback (reference, gotchas 2 and 6). The MAP
-survives; only the executor changes.
+Strikes are per task. **Executor switches** are different: the preferred CLI
+executor can't run (or the PLAN picks another). The MAP survives; only who types
+the code changes.
+
+### Order (binding)
+
+1. **Codex** `gpt-5.6-sol` — default. See `reference/codex-invocation.md`.
+2. **Grok CLI** headless `grok-4.5` — when Codex is unavailable **or** the decision
+   register assigns a task to Grok. Claude (orchestrator) launches `grok` the same
+   way it launches `codex exec`. See `reference/grok-invocation.md`.
+3. **Opus 4.8 subagent** — last resort only if both CLIs fail. Agent/Task with
+   `model: claude-opus-4-8`. **Never Fable.**
 
 ### Hard rule: never dump implementation into the main session
 
-When codex is unavailable, **do not** implement the packet in the orchestrator
-thread (even if that thread is already Opus, Sonnet, Fable, or Grok).
-Bulk generation in the main context is exactly what MAP exists to avoid.
-Fallback execution always goes to a **pinned frontier subagent**.
+**Do not** implement the packet in the orchestrator thread (even if that thread is
+already Opus, Sonnet, Fable, or Grok). Bulk generation in the main context is
+exactly what MAP exists to avoid.
 
 ### Banned for any MAP implementation path (absolute)
 
@@ -190,49 +196,40 @@ executor fallback on:
 Fable may remain the *orchestrator* (plan, interview, pass gate, commit) if the
 user chose it for the session — that is fine. It must **never** be the model
 that types product code for a MAP task. If the only available subagent would
-inherit Fable, **stop** and tell the user to pin Opus 4.8 (or fix codex) rather
-than implementing under Fable.
+inherit Fable, **stop** and tell the user to pin Opus 4.8 (or fix codex/grok)
+rather than implementing under Fable.
 
-### Pinned fallback executor
+### Pinned CLI / subagent executors
 
-House pins (update when a new frontier ships; do not drift to mid-tier models):
+| Priority | Executor | How Claude dispatches |
+|----------|----------|------------------------|
+| 1 | Codex Sol | `command codex exec ...` — `reference/codex-invocation.md` |
+| 2 | Grok 4.5 CLI | `command grok --prompt-file .map/tasks/... --cwd <repo> -m grok-4.5 ...` — `reference/grok-invocation.md` |
+| 3 | Opus 4.8 | Agent/Task `general-purpose` + **`model: claude-opus-4-8`** (required; never inherit) |
 
-| Host | Fallback model | How to dispatch |
-|------|----------------|-----------------|
-| **Claude Code** | **Opus 4.8 only** | Agent/Task: `subagent_type=general-purpose`, **`model: claude-opus-4-8`** (required). Alias `opus` only if host docs still resolve it to 4.8 — prefer the full id. **Never** omit `model`. **Never** `fable` / `sonnet` / `haiku` / inherit. |
-| **Grok Build** | **Grok 4.5** | `spawn_subagent` with `subagent_type=general-purpose` — Grok 4.5 agent stack. **Not** the main chat thread. |
-
-Prefer **Codex (gpt-5.6-sol)** whenever it can run. Fallback is only when codex is
-unavailable. Do not mix hosts mid-MAP: Claude Code sessions fall back to Opus 4.8;
-Grok sessions fall back to Grok 4.5 subagents — not the other way around.
+If the orchestrator **is** Grok Build (not Claude), primary is still Codex; fallback
+is a Grok 4.5 `spawn_subagent` (not nested `grok -p` from inside Grok unless you
+know why). See `reference/grok-invocation.md` for the Claude→Grok path.
 
 - A permission denial is a routing decision, not a flag problem. Swapping a
-  blocked bypass flag (`--yolo`) for the sanctioned sandboxed form is fine;
-  **never vary the sanctioned form after it is denied** — that reads as a
-  bypass attempt. One denial of the plain dispatch → switch executors. (If only
-  the subshell resume form is denied, codex is still available — retry as a
-  fresh plain dispatch instead.)
+  blocked bypass flag for the documented sanctioned form is fine once;
+  **never thrash flags after a denial** — that reads as a bypass attempt.
+  One denial of the plain Codex dispatch → try **Grok CLI** (if available), else
+  Opus 4.8. (If only Codex `resume` is denied, retry a fresh plain Codex
+  dispatch first.)
 - Record the switch as a numbered decision in `.map/PLAN.md`
-  (e.g. `Dxx Executor = Opus 4.8 subagent — codex denied by auto-mode classifier`
-  or `Dxx Executor = Grok 4.5 subagent — codex unavailable`).
-- Dispatch the **same packets** to the pinned subagent. The packet and HARD
-  RULES contract hold, REPORT format included; only the codex CLI invocation
-  disappears — the subagent reads the packet file and returns its REPORT as its
-  result. Save that REPORT to `.map/out/NN.md` to keep the audit trail.
-  Log with `executor-switch (opus-4.8)` or `executor-switch (grok-4.5)`.
-- The failure protocol applies minus the codex mechanics: a strike-1 retry is a
-  **fresh pinned subagent** with the sharpened `-r2` packet (no codex resume, no
-  effort escalation). Strike 2 is **also** a pinned subagent takeover — still
-  **not** the main session typing the diff. The orchestrator only reviews, runs
-  the pass gate, and commits. Strikes already accrued on a task carry across the
-  switch.
-- Review, verify bar, per-task commits: unchanged and **always** on the
-  orchestrator. The discipline is the point, not the executor.
-- If the trigger was the permission denial, suggest the user add
-  `"Bash(codex exec:*)"` to `permissions.allow` in `~/.claude/settings.json`
-  (user-level, holds across repos) — never edit that file yourself after a
-  denial. Persistent sandbox spawn death (gotcha 6) has no settings fix after
-  `danger-full-access` has already been tried.
+  (e.g. `Dxx Executor = grok-4.5 CLI — codex denied by auto-mode classifier`).
+- Dispatch the **same packets**. HARD RULES and REPORT format hold; only the
+  launcher changes. Save stdout / REPORT to `.map/out/NN.md`.
+  Log `executor-switch (grok-4.5)` or `executor-switch (opus-4.8)`.
+- Strike-1 on a non-Codex executor: fresh run with `-r2` packet (Grok CLI or Opus
+  subagent). Strike 2: same chain — still **not** the main session typing the
+  diff. Orchestrator only pass-gates and commits. Strikes carry across switches.
+- Review, verify bar, per-task commits: always on the orchestrator.
+- Permission denials: suggest user allowlist (never edit settings yourself after
+  a denial): `"Bash(codex exec:*)"` and/or `"Bash(grok:*)"` /
+  `"Bash(grok.exe:*)"` in `permissions.allow`. Sandbox spawn death on Codex:
+  `danger-full-access` once, then Grok CLI, then Opus.
 
 ## Phase 3 — Close
 
@@ -266,10 +263,12 @@ HARD RULES — violating any of these means your work is discarded:
 
 ## Invocation
 
-Full command reference, flags, sandbox fallback, and known gotchas:
-`reference/codex-invocation.md`.
+**Codex (primary executor):** `reference/codex-invocation.md`.
 
-Default shape (Git Bash / macOS / Linux; prompt ALWAYS via file):
+**Grok CLI (secondary executor — Claude launches headless Grok):**  
+`reference/grok-invocation.md`.
+
+Default Codex shape (Git Bash / macOS / Linux; prompt ALWAYS via file):
 
 ```bash
 command codex exec -s workspace-write -c approval_policy=never --skip-git-repo-check \

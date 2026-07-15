@@ -1,21 +1,24 @@
-# Grok CLI invocation reference (from Claude Code / MAP)
+# Grok CLI invocation reference (MAP primary coding executor)
 
-Claude (or any MAP orchestrator) can dispatch **Grok Build CLI** as an
-**executor** the same way it dispatches Codex: packet on disk → headless agent →
-REPORT → orchestrator pass gate → commit.
+Any MAP orchestrator (prefer **Fable 5** on Claude Code; else **Codex 5.6 Sol**;
+Grok Build is fine too) dispatches **Grok Build CLI** as the **default coding
+executor**: packet on disk → headless agent → REPORT → orchestrator pass gate →
+commit.
 
-This is **not** “run the MAP session inside Grok.” It is **Claude plans, Grok
-types** (or Codex types — prefer Codex when available).
-
-Codex flags remain in `codex-invocation.md`. This file is only the Grok CLI glue.
+This is **not** “run the MAP session inside Grok only.” It is **orchestrator plans,
+Grok types** (fastest house coding model). Codex Sol is the coding fallback - see
+`codex-invocation.md`.
 
 ## When to use Grok vs Codex
 
 | Priority | Executor | Use when |
 |----------|----------|----------|
-| 1 | **Codex** `gpt-5.6-sol` | Default. Cheapest bulk implementation. |
-| 2 | **Grok CLI** `grok-4.5` | Codex unavailable (permission deny, sandbox dead after fallback, not installed/auth), or the MAP decision register explicitly picks Grok for a task. |
-| 3 | **Opus 4.8 subagent** | Only if both CLI executors fail. Never Fable. Never main-session impl. |
+| 1 | **Grok CLI** `grok-4.5` | **Default.** Fastest house model for coding. |
+| 2 | **Codex** `gpt-5.6-sol` | Grok unavailable (not installed/auth, permission deny, infra failure after retry), or the MAP decision register assigns Sol for depth/quality. |
+| 3 | **Opus 4.8 subagent** | Only if both CLI executors fail. Never Fable. Never main-session impl under Fable. |
+
+**Orchestrator preference (separate from coding):** Fable 5 → Codex 5.6 Sol if Fable 5
+is unavailable. Fable may orchestrate only; it never executes packets.
 
 Do not run Codex and Grok on the **same** task in parallel (conflict risk).
 Parallel tasks still require file-disjoint scopes and separate `-o` / out files.
@@ -68,8 +71,8 @@ $repo = "C:\Users\Name\IdeaProjects\repo"
 |------|-----|
 | `--prompt-file` | Packet body; same contract as Codex stdin file. Prefer over huge `-p "..."`. |
 | `--cwd` | Repo root. Always absolute. |
-| `-m grok-4.5` | House pin for MAP fallback (frontier). Do not omit (avoids weaker defaults). `grok-build` is the product default agent profile name in some docs — for MAP pin **`grok-4.5`**. |
-| `--reasoning-effort high` | Aligns with Codex house effort default (speed). Escalate only if quality fails. |
+| `-m grok-4.5` | House pin for **primary** MAP coding (speed). Do not omit. |
+| `--reasoning-effort high` | House default (speed). Escalate only if quality fails. |
 | `--yolo` / `--always-approve` | Required for unattended headless (auto-approve tools). **Scoped by packet HARD RULES + denylists below.** |
 | `--no-subagents` | Blocks Grok from spawning its own subagent fan-out (MAP owns parallelism). **Use this, not `--disallowed-tools "Agent"`** (see gotcha). |
 | `--deny "Bash(git*)"` | Reinforces HARD RULES: no git from the executor. |
@@ -77,19 +80,20 @@ $repo = "C:\Users\Name\IdeaProjects\repo"
 
 ### Claude Code auto-mode note
 
-Claude Code may classify `--yolo` / `--always-approve` as dangerous (same family as
-Codex `--yolo`). If the plain sanctioned dispatch is denied:
+Claude Code may classify `--yolo` / `--always-approve` as dangerous. If the plain
+sanctioned dispatch is denied:
 
 1. Do **not** keep tweaking bypass flags.
-2. Fall through to **Opus 4.8** subagent executor (see SKILL.md), or ask the user
-   to allowlist `Bash(grok:*)` / `Bash(grok.exe:*)` in `permissions.allow`.
+2. Fall through to **Codex Sol** executor (see `codex-invocation.md`), then
+   **Opus 4.8** subagent, or ask the user to allowlist `Bash(grok:*)` /
+   `Bash(grok.exe:*)` in `permissions.allow`.
 3. Suggested allowlist entry (user-level, merge into existing file):
 
 ```json
-{ "permissions": { "allow": ["Bash(grok:*)", "Bash(grok.exe:*)"] } }
+{ "permissions": { "allow": ["Bash(grok:*)", "Bash(grok.exe:*)", "Bash(codex exec:*)"] } }
 ```
 
-## Packet contract (same as Codex)
+## Packet contract (same for every executor)
 
 Every packet still includes the HARD RULES block from SKILL.md (no git, no deps,
 scope only, REPORT shape). Grok does not get a looser contract.
@@ -100,15 +104,15 @@ Optional one-liner at the top of the packet when dispatching to Grok:
 You are the MAP executor (Grok CLI). Obey HARD RULES. No git. End with ## REPORT.
 ```
 
-## Pass gate (orchestrator, always Claude / host)
+## Pass gate (orchestrator, always)
 
-Identical to Codex:
+Identical for every coding executor:
 
 1. REPORT present; `STATUS: done` when work was required.
 2. Diff only in-scope; non-empty for real implementation tasks.
 3. Orchestrator re-runs the verify bar.
 
-Grok’s own claims in PROOF are advisory.
+Grok's own claims in PROOF are advisory.
 
 ## Resume / follow-up
 
@@ -126,22 +130,31 @@ command grok --prompt-file ".map/tasks/NN-slug-r2.md" --cwd "<repo>" \
 
 ## Logging
 
-- Codex path: normal task line; `sandbox-retry` if Windows sandbox fallback ran.
-- Grok path: `executor-switch (grok-4.5)` when Grok was used because Codex could
-  not, **or** when the PLAN decision register chose Grok for that task.
+- Grok primary path: normal task line (no switch label required).
+- Codex path: `executor-switch (codex-sol)` when Sol ran because Grok could not,
+  or when the PLAN decision register chose Sol for that task.
+- Opus path: `executor-switch (opus-4.8)` / `takeover (opus-4.8)`.
 - Never log a Fable executor.
 
 ## Decision register examples
 
 ```markdown
-- D10 Executor primary = codex gpt-5.6-sol
-- D11 Executor fallback = grok CLI grok-4.5 (then Opus 4.8 subagent)
+- D10 Orchestrator = fable-5
+- D11 Executor primary = grok-4.5
+- D12 Executor fallback = codex gpt-5.6-sol (then Opus 4.8 subagent)
 ```
 
 Or per-task override:
 
 ```markdown
-- D12 Task 03 executor = grok-4.5 (explicit)
+- D13 Task 03 executor = codex gpt-5.6-sol (depth)
+```
+
+When Fable 5 is unavailable:
+
+```markdown
+- D10 Orchestrator = codex gpt-5.6-sol (fable-5 unavailable)
+- D11 Executor primary = grok-4.5
 ```
 
 ## Gotchas
@@ -164,7 +177,7 @@ Or per-task override:
 7. **Nested multi-agent:** `--no-subagents` keeps MAP owning parallelism. Packet
    HARD RULES still win even if skills load inside Grok.
 
-## Minimal smoke (Claude session)
+## Minimal smoke (orchestrator session)
 
 ```bash
 command grok --version

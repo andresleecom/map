@@ -1,10 +1,15 @@
 # Codex CLI invocation reference
 
+MAP house roles: **Grok 4.5** is the default **coding** executor (speed).
+**Codex `gpt-5.6-sol`** is the **coding fallback** (depth / when Grok is down) and
+the **orchestrator fallback** when **Fable 5** is unavailable. Fable orchestrates
+only - never implement under Fable. Full chain: `skill/SKILL.md`.
+
 Tested against codex-cli 0.144.x, headless, from Claude Code's Bash tool and
-Grok Build (Git Bash on Windows; identical on macOS/Linux, except Intel Macs —
+Grok Build (Git Bash on Windows; identical on macOS/Linux, except Intel Macs -
 see the platform note).
 
-## The working command (default)
+## The working command (coding fallback / Sol path)
 
 ```bash
 command codex exec \
@@ -118,10 +123,12 @@ Do not use `Process.Start("codex")` without the `.cmd` shim on Windows PATH layo
 
 ## The model: GPT-5.6-Sol, pinned
 
-MAP delegates to `gpt-5.6-sol` — OpenAI's frontier agentic coding model in the
-5.6 family (Sol = frontier, Terra = balanced, Luna = fast/cheap). Pin it with
-`-m` on every dispatch; never ride the machine's `config.toml` default, because
-a MAP must behave the same on every machine that resumes it.
+When MAP uses Codex for coding (or Sol is the orchestrator), pin `gpt-5.6-sol` -
+OpenAI's frontier agentic coding model in the 5.6 family (Sol = frontier,
+Terra = balanced, Luna = fast/cheap). Prefer **Grok 4.5** first for routine
+packet coding; use Sol when Grok cannot run or the PLAN assigns Sol for depth.
+Pin with `-m` on every Codex dispatch; never ride the machine's `config.toml`
+default, because a MAP must behave the same on every machine that resumes it.
 
 Two traps in this setup:
 

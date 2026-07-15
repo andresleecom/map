@@ -91,12 +91,13 @@ HARD RULES — violating any of these means your work is discarded:
 ```
 
 Verdict notes: use `sandbox-retry` when the Windows/sandbox fallback ran;
-use `takeover (opus-4.8)` or `takeover (grok-4.5)` when a pinned frontier
-subagent implemented after two strikes — never a silent main-session impl and
-**never Fable**;
-use `executor-switch (grok-4.5)` when Claude dispatched Grok CLI, or
-`executor-switch (opus-4.8)` for the last-resort Opus subagent (Fable is not a
-valid executor label — stop instead of logging a fable switch).
+use `takeover (opus-4.8)` or `takeover (codex-sol)` when a pinned fallback
+implemented after two strikes - never a silent Fable impl and **never Fable**
+as an executor label;
+use `executor-switch (codex-sol)` when Sol ran because Grok could not (or PLAN
+assigned Sol); use `executor-switch (opus-4.8)` for last-resort Opus;
+use `executor = codex-sol (orchestrator impl)` only when Fable 5 was unavailable
+so Sol was the orchestrator and Grok could not run.
 
 ## `.map/GH-QUEUE.md` (only if a session denies external writes)
 

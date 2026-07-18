@@ -1,3 +1,0 @@
-• The user wants me to output exactly "AGENT-8-OK" and nothing else. This looks like a test/probe message, possibly from the parallel wave runner script (run-wave.sh in the working directory suggests parallel agent waves). Just output it.
-
-To resume this session: kimi -r session_fc34e7dc-528d-432b-9fc4-5d82188b9787

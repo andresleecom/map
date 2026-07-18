@@ -1,3 +1,0 @@
-• The user wants me to output exactly "AGENT-22-OK" and nothing else. This is a simple request. The system reminder says auto permission mode is active, but this doesn't require any tools. I should just output the token.
-
-To resume this session: kimi -r session_72fa81e1-f3dd-4c7e-930f-b91728ed6642

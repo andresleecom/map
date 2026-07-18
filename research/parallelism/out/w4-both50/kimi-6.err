@@ -1,3 +1,0 @@
-• The user asks to output exactly the token "AGENT-6-OK" and nothing else. This is a simple instruction — likely a coordination probe (this directory is called "parallelism" and there are wave outputs, so this looks like a parallel-agent test harness). Just output the token.
-
-To resume this session: kimi -r session_5f01bd2b-8364-48b0-8334-5ca06955f804

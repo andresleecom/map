@@ -1,4 +1,0 @@
-WAVE=w4-both50 exec=both n=50 procs=100 ok=100 wall=41s
-per-agent seconds: min=9.1 avg=25.6 max=33.5
-  kimi: ok=50/50 min=9.1 avg=22.0 max=33.2
-  grok: ok=50/50 min=23.0 avg=29.2 max=33.5

@@ -1,3 +1,0 @@
-• The user asks to output exactly the token and nothing else. This is a simple instruction — likely a connectivity/probe check. I should comply: output "AGENT-27-OK" and nothing else.
-
-To resume this session: kimi -r session_9bfc6d74-91ea-4173-b854-2943bc9b341f

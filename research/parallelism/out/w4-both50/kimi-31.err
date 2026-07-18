@@ -1,3 +1,0 @@
-• The user wants me to output exactly the token "AGENT-31-OK" and nothing else. This is a simple instruction — no tools needed. The system reminder just says auto permission mode is active. I should just output the token exactly.
-
-To resume this session: kimi -r session_b0d375e7-28c8-4d21-bce5-fc6c90e0e800

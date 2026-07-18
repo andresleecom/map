@@ -1,7 +1,0 @@
-• The user is asking me to output exactly one token: AGENT-17-OK
-
-  This looks like a test message, possibly from an automated system checking if I'm a specific agent instance. The instruction says "Output exactly this token and nothing else: AGENT-17-OK"
-
-  I should just comply with this simple request.
-
-To resume this session: kimi -r session_5dcdbb5c-f3c6-41e6-ad26-ad0f38f38d73

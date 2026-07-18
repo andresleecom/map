@@ -1,0 +1,1 @@
+WAVE=w2-kimi10 exec=kimi n=10 procs=10 ok=10 wall=19s

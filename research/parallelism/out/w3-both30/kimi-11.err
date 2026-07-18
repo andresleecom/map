@@ -1,0 +1,5 @@
+• The user asks me to output exactly this token and nothing else: AGENT-11-OK
+
+  This is a simple instruction. I should just output the token. No tools needed.
+
+To resume this session: kimi -r session_393dac94-1c17-41aa-8c24-b92db80bdf0e

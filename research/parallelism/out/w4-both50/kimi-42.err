@@ -1,0 +1,5 @@
+• The user asks me to output exactly this token and nothing else: AGENT-42-OK
+
+  This is a simple request. I should just output the token.
+
+To resume this session: kimi -r session_5a6dba94-5061-431d-9999-82f7ecb58e81

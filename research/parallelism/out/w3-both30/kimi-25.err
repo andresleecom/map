@@ -1,0 +1,3 @@
+• The user wants me to output exactly "AGENT-25-OK" and nothing else. This seems like a test of instruction following. I should just output that token.
+
+To resume this session: kimi -r session_8fde2ac0-1656-48ae-8b31-d5e5c3aa898c

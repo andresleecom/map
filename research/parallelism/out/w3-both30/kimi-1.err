@@ -1,0 +1,3 @@
+• The user asks me to output exactly "AGENT-1-OK" and nothing else. This looks like a test of some parallelism setup — likely a wave runner testing subagent outputs. I should comply exactly.
+
+To resume this session: kimi -r session_4232400b-f963-4299-9286-1ab9d1e0026a

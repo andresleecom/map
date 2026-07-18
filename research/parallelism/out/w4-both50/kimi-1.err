@@ -1,0 +1,3 @@
+• The user asks to output exactly this token and nothing else: AGENT-1-OK. This looks like a probe/test to verify agent identity. Just comply — output the token.
+
+To resume this session: kimi -r session_c0166067-5136-46e7-aadf-04262a3b127d

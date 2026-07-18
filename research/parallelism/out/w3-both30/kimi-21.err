@@ -1,0 +1,3 @@
+• The user wants me to output exactly "AGENT-21-OK" and nothing else. This is a simple request — likely part of a parallelism test given the working directory is research/parallelism. Just output the token.
+
+To resume this session: kimi -r session_c8e8ad0f-a8bb-4f0c-b34d-9ce01c4a8fa9

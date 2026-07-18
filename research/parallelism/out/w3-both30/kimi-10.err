@@ -1,0 +1,5 @@
+• The user wants me to output exactly "AGENT-10-OK" and nothing else. This is a simple request — likely a test of an orchestration setup (looks like they're testing parallel agent waves, given the directory structure with w1-grok10, w2-kimi10, w3-both30).
+
+  The instruction is explicit: output exactly this token and nothing else. I should comply precisely.
+
+To resume this session: kimi -r session_af20cbfb-0290-43d8-aa8a-08573b55979e

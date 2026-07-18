@@ -1,0 +1,5 @@
+• The user asks me to output exactly the token "AGENT-18-OK" and nothing else. This looks like a test of a parallelism system — the working directory is `research/parallelism` with `out/` directories for different waves, suggesting this is an orchestration test where multiple agents are being spawned and checked.
+
+  This is a simple, benign request — just output a token. No tools needed. I should comply exactly: output only `AGENT-18-OK` and nothing else.
+
+To resume this session: kimi -r session_b58e21c2-d950-4f3a-b933-f7d2234fa32f

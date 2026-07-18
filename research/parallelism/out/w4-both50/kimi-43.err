@@ -1,0 +1,5 @@
+• The user wants me to output exactly "AGENT-43-OK" and nothing else. This is a simple request — likely a test of a parallel agent setup (given the directory is research/parallelism with worker output directories).
+
+  I should just output the token exactly.
+
+To resume this session: kimi -r session_239669e1-41cc-4771-89b3-9cd2b0ca5eab

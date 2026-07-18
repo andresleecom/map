@@ -1,0 +1,4 @@
+WAVE=w3-both30 exec=both n=30 procs=60 ok=60 wall=33s
+per-agent seconds: min=10.7 avg=18.9 max=31.5
+  kimi: ok=30/30 min=10.7 avg=19.3 max=31.5
+  grok: ok=30/30 min=15.6 avg=18.5 max=30.7

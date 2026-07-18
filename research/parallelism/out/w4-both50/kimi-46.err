@@ -1,0 +1,3 @@
+• The user wants me to output exactly "AGENT-46-OK" and nothing else. This looks like a probe or a canary test — possibly from the parallelism research setup in this directory. The instruction is simple and clear. No tools needed.
+
+To resume this session: kimi -r session_c3784d0b-43b7-446a-a042-6ec1c2eb9a80

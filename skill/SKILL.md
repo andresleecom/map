@@ -86,6 +86,10 @@ Orchestrate outside (one MAP per repo, or a higher-level plan).
 If the user typed `/map <task>`, triage that task.
 If suggesting MAP on its own, ask first: "This fits /map - plan here, execute on Grok 4.5. Run it?"
 
+## Phase 0 - Prism (multi-perspective scope expansion)
+
+For tier L (and recommended for M): before planning, fan the user's VERBATIM request out to 8-12 parallel read-only cheap-executor agents (Kimi/Grok CLI), each analyzing through ONE assigned lens (intent, minimal, maximal, adversarial, architecture, ux-product, ops-cost, interrogator), reports capped at 40 lines in `.map/prism/`. Lenses never see each other. The orchestrator then synthesizes `.map/PRISM.md`: converged scope, DIVERGENCES (each becomes a user question or a decision), <=4 distilled questions feeding the interview, and a scope statement the user can veto. Parallel dispatch is validated to 100 concurrent agents (see `research/parallelism/` in this repo); the real limits are file disjointness and review bandwidth, not CLI capacity. Full protocol + dispatch snippet: `reference/prism.md`.
+
 ## Phase 1 - Plan
 
 1. **Recon** to the depth the tier requires. Prefer delegated recon for anything wide.

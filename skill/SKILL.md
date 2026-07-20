@@ -257,8 +257,11 @@ thread - use a Grok 4.5 `spawn_subagent` or Codex Sol for packets. See
   pass-gates and commits. Strikes carry across switches.
 - Review, verify bar, per-task commits: always on the orchestrator.
 - Permission denials: suggest user allowlist (never edit settings yourself after
-  a denial): `"Bash(grok:*)"`, `"Bash(grok.exe:*)"`, and/or `"Bash(codex exec:*)"`
-  in `permissions.allow`. Codex sandbox spawn death: `danger-full-access` once,
+  a denial). Rules must match the dispatch shape, which starts with `command `:
+  `"Bash(command grok:*)"`, `"Bash(command grok.exe:*)"`, `"Bash(command kimi:*)"`,
+  and/or `"Bash(command codex exec:*)"` in `permissions.allow`. Bare forms like
+  `"Bash(grok:*)"` never match a real dispatch - keep them only for direct calls
+  (`grok --version`). Codex sandbox spawn death: `danger-full-access` once,
   then switch executors.
 
 ## Phase 3 - Close

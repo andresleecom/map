@@ -14,8 +14,9 @@ Grok types** (fastest house coding model). Codex Sol is the coding fallback - se
 | Priority | Executor | Use when |
 |----------|----------|----------|
 | 1 | **Grok CLI** `grok-4.5` | **Default.** Fastest house model for coding. |
-| 2 | **Codex** `gpt-5.6-sol` | Grok unavailable (not installed/auth, permission deny, infra failure after retry), or the MAP decision register assigns Sol for depth/quality. |
-| 3 | **Opus 4.8 subagent** | Only if both CLI executors fail. Never Fable. Never main-session impl under Fable. |
+| 2 | **Kimi CLI** `kimi-code/kimi-for-coding` | Grok unavailable (not installed/auth, permission deny, infra failure after retry). Fast, cheap, agentic coding. See `kimi-invocation.md`. |
+| 3 | **Codex** `gpt-5.6-sol` | Depth / quality takeovers, or the MAP decision register assigns Sol. |
+| 4 | **Opus 4.8 subagent** | Only if all CLI executors fail. Never Fable. Never main-session impl under Fable. |
 
 **Orchestrator preference (separate from coding):** Fable 5 → Codex 5.6 Sol if Fable 5
 is unavailable. Fable may orchestrate only; it never executes packets.
@@ -84,13 +85,19 @@ Claude Code may classify `--yolo` / `--always-approve` as dangerous. If the plai
 sanctioned dispatch is denied:
 
 1. Do **not** keep tweaking bypass flags.
-2. Fall through to **Codex Sol** executor (see `codex-invocation.md`), then
-   **Opus 4.8** subagent, or ask the user to allowlist `Bash(grok:*)` /
-   `Bash(grok.exe:*)` in `permissions.allow`.
+2. Fall through to **Kimi** (see `kimi-invocation.md`), then **Codex Sol**
+   (`codex-invocation.md`), then **Opus 4.8** subagent, or ask the user to
+   allowlist `Bash(command grok:*)` / `Bash(command grok.exe:*)` in
+   `permissions.allow`.
+   Dispatches start with `command `, so bare `Bash(grok:*)` rules never match them.
 3. Suggested allowlist entry (user-level, merge into existing file):
 
 ```json
-{ "permissions": { "allow": ["Bash(grok:*)", "Bash(grok.exe:*)", "Bash(codex exec:*)"] } }
+{ "permissions": { "allow": [
+  "Bash(grok:*)", "Bash(grok.exe:*)",
+  "Bash(command grok:*)", "Bash(command grok.exe:*)",
+  "Bash(codex exec:*)", "Bash(command codex exec:*)"
+] } }
 ```
 
 ## Packet contract (same for every executor)
@@ -131,17 +138,19 @@ command grok --prompt-file ".map/tasks/NN-slug-r2.md" --cwd "<repo>" \
 ## Logging
 
 - Grok primary path: normal task line (no switch label required).
+- Kimi path: `executor-switch (kimi-k2.7)` when K2.7 ran because Grok could not,
+  or when the PLAN decision register chose Kimi for that task.
 - Codex path: `executor-switch (codex-sol)` when Sol ran because Grok could not,
   or when the PLAN decision register chose Sol for that task.
 - Opus path: `executor-switch (opus-4.8)` / `takeover (opus-4.8)`.
-- Never log a Fable executor.
+- Never log a Fable (or `k3`) executor.
 
 ## Decision register examples
 
 ```markdown
 - D10 Orchestrator = fable-5
 - D11 Executor primary = grok-4.5
-- D12 Executor fallback = codex gpt-5.6-sol (then Opus 4.8 subagent)
+- D12 Executor fallback = kimi k2.7 → codex gpt-5.6-sol → Opus 4.8 subagent
 ```
 
 Or per-task override:

@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Installs the map skill into orchestrator skill dirs as links.
-# Default targets: ~/.claude/skills/map and ~/.grok/skills/map
+# Default targets: ~/.claude/skills/map, ~/.grok/skills/map, ~/.agents/skills/map (Kimi Code)
 # - Unix: symlink
 # - Windows (Git Bash / MSYS): directory junction via PowerShell
 # Re-running is safe: replaces an existing link, refuses to clobber a real directory.
@@ -13,8 +13,8 @@ repo_skill="$(cd "$(dirname "$0")/skill" && pwd)"
   exit 1
 }
 
-# Optional: MAP_INSTALL_TARGETS="claude" or "grok" or "claude,grok" (default both)
-targets_csv="${MAP_INSTALL_TARGETS:-claude,grok}"
+# Optional: MAP_INSTALL_TARGETS="claude" or "grok" or "kimi" or "claude,grok,kimi" (default all three)
+targets_csv="${MAP_INSTALL_TARGETS:-claude,grok,kimi}"
 
 is_windows() {
   case "$(uname -s 2>/dev/null || echo unknown)" in
@@ -46,9 +46,11 @@ remove_existing_link() {
 
   if is_windows && [ -d "$target" ]; then
     win=$(to_win_path "$target")
-    # PowerShell: remove only if reparse point (junction/symlink)
+    # PowerShell: remove only if reparse point (junction/symlink).
+    # $i.Delete() removes the reparse point itself; Remove-Item can throw
+    # NullReferenceException on junctions under Windows PowerShell 5.1.
     if powershell.exe -NoProfile -Command \
-      "\$i = Get-Item -LiteralPath '$win' -Force; if (\$i.Attributes -band [IO.FileAttributes]::ReparsePoint) { Remove-Item -LiteralPath '$win' -Force; exit 0 } else { exit 2 }" \
+      "\$i = Get-Item -LiteralPath '$win' -Force; if (\$i.Attributes -band [IO.FileAttributes]::ReparsePoint) { \$i.Delete(); exit 0 } else { exit 2 }" \
       >/dev/null 2>&1; then
       return 0
     fi
@@ -91,8 +93,9 @@ for name in $targets_csv; do
   case "$name" in
     claude) link_one "$HOME/.claude/skills" ;;
     grok)   link_one "$HOME/.grok/skills" ;;
+    kimi)   link_one "$HOME/.agents/skills" ;;
     *)
-      echo "Unknown install target '$name' (use claude and/or grok)." >&2
+      echo "Unknown install target '$name' (use claude, grok and/or kimi)." >&2
       exit 1
       ;;
   esac

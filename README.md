@@ -8,8 +8,8 @@ It splits coding by comparative advantage:
 
 | Role | Preferred | Fallback |
 |------|-----------|----------|
-| **Orchestrator** (plan, interview, pass gate, git, review) | **Fable 5** (Claude Code) | **Codex 5.6 Sol** if Fable 5 is unavailable |
-| **Coding executor** (type the packet) | **Grok 4.5** CLI (fastest) | **Codex 5.6 Sol** → **Opus 4.8** subagent |
+| **Orchestrator** (plan, interview, pass gate, git, review) | **Fable 5** (Claude Code) or **Kimi k3** (Kimi Code) | **Codex 5.6 Sol** if neither is available |
+| **Coding executor** (type the packet) | **Grok 4.5** CLI (fastest) | **Kimi K2.7** CLI → **Codex 5.6 Sol** → **Opus 4.8** subagent |
 
 Fable may **orchestrate** only. It must **never** implement MAP packets.
 
@@ -30,8 +30,8 @@ you --/map--> orchestrator (Fable 5 / Sol)              grok-4.5 (default coder)
             final review · .map/ removed · handoff report
 ```
 
-Coding fallback when Grok cannot run: **Codex Sol**, then **Opus 4.8** - never the
-Fable main session.
+Coding fallback when Grok cannot run: **Kimi K2.7**, then **Codex Sol**, then
+**Opus 4.8** - never the Fable (or `k3`) main session.
 
 ## Why
 
@@ -48,7 +48,7 @@ Grok 4.5 does quickly when the spec is frozen. `map` makes the split systematic:
   the task's verify bar (build -> tests -> drive-the-flow), and commits per verified
   task. Executor PROOF is advisory only.
 - **Two strikes / executor chain.** Prefer **Grok 4.5**; if Grok can't run, dispatch
-  **Codex Sol**; last resort **Opus 4.8** - never Fable for implementation.
+  **Kimi K2.7**, then **Codex Sol**; last resort **Opus 4.8** - never Fable for implementation.
   Infrastructure failures are not model strikes.
 - **Hard rules.** Executors never touch git, never change dependencies, never edit
   outside the packet's scope. Commits are yours - clean authorship, no AI attribution.
@@ -69,13 +69,16 @@ Keep the work in the main session (or skip MAP) when:
 
 Requires:
 
-1. An orchestrator that can load skills (Claude Code and/or Grok Build). Prefer a
-   **Fable 5** Claude Code session; if Fable 5 is unavailable, orchestrate with
-   **Codex 5.6 Sol**.
+1. An orchestrator that can load skills (Claude Code, Kimi Code, and/or Grok Build).
+   Prefer a **Fable 5** Claude Code session or a **Kimi k3** Kimi Code session; if
+   neither is available, orchestrate with **Codex 5.6 Sol**.
 2. Primary coder: authenticated [Grok CLI](https://grok.x.ai/) with `grok-4.5`
    (`grok -m grok-4.5` headless - see
    [`skill/reference/grok-invocation.md`](skill/reference/grok-invocation.md))
-3. Fallback coder (and Sol-as-orchestrator): authenticated
+3. Fallback coder #1: authenticated [Kimi Code CLI](https://www.kimi.com/code/docs/en/)
+   with `kimi-code/kimi-for-coding` (`kimi -m kimi-code/kimi-for-coding -p ...` headless - see
+   [`skill/reference/kimi-invocation.md`](skill/reference/kimi-invocation.md))
+4. Fallback coder #2 (and Sol-as-orchestrator): authenticated
    [Codex CLI](https://github.com/openai/codex) with `gpt-5.6-sol`
    (`codex exec -m gpt-5.6-sol` headlessly; Intel Macs currently need a fallback
    model - see
@@ -93,21 +96,24 @@ cd map
 .\install.ps1       # Windows (junction, no admin needed)
 ```
 
-By default both scripts link `skill/` into:
+By default the scripts link `skill/` into:
 
 - `~/.claude/skills/map` (Claude Code)
 - `~/.grok/skills/map` (Grok Build)
+- `~/.agents/skills/map` (Kimi Code - user-level skills dir)
 
 so `git pull` updates the skill in place. Install only one host:
 
 ```bash
 MAP_INSTALL_TARGETS=claude ./install.sh
 MAP_INSTALL_TARGETS=grok ./install.sh
+MAP_INSTALL_TARGETS=kimi ./install.sh
 ```
 
 ```powershell
 $env:MAP_INSTALL_TARGETS = "claude"; .\install.ps1
 $env:MAP_INSTALL_TARGETS = "grok";   .\install.ps1
+$env:MAP_INSTALL_TARGETS = "kimi";   .\install.ps1
 ```
 
 On Windows, invoke codex from **Git Bash** (`C:\Program Files\Git\bin\bash.exe`),
@@ -126,14 +132,25 @@ To keep CLI executors available, merge into `permissions.allow` in
     "allow": [
       "Bash(grok:*)",
       "Bash(grok.exe:*)",
-      "Bash(codex exec:*)"
+      "Bash(command grok:*)",
+      "Bash(command grok.exe:*)",
+      "Bash(kimi:*)",
+      "Bash(kimi.exe:*)",
+      "Bash(command kimi:*)",
+      "Bash(command kimi.exe:*)",
+      "Bash(codex exec:*)",
+      "Bash(command codex exec:*)"
     ]
   }
 }
 ```
 
-`grok` is the primary coding path; `codex exec` matters when Grok is unavailable
-or the PLAN assigns Sol.
+The `command `-prefixed rules are the ones that actually fire:
+every MAP dispatch starts with `command ` (to bypass shell aliases), and a prefix rule matches from the first character, so the bare forms alone never match a real dispatch.
+Keep the bare forms too for direct calls like `kimi --version`.
+
+`grok` is the primary coding path; `kimi` is the fast fallback; `codex exec`
+matters for depth or when the PLAN assigns Sol.
 
 ## Use
 
@@ -155,6 +172,7 @@ skill/
   SKILL.md                      # the skill - flow, roles, contract
   reference/
     grok-invocation.md          # primary coding executor: Grok 4.5 CLI
+    kimi-invocation.md          # coding fallback + Kimi-as-orchestrator: Kimi CLI
     codex-invocation.md         # coding fallback + Sol-as-orchestrator
     templates.md                # PLAN / task packet / log templates
 install.sh · install.ps1
@@ -185,10 +203,12 @@ reasons discovered the hard way:
 | Piece | Pin / version | Role |
 |-------|---------------|------|
 | Orchestrator | Fable 5 (Claude Code) | Preferred judgment session |
-| Orchestrator fallback | `gpt-5.6-sol` | When Fable 5 unavailable |
+| Orchestrator alt | `kimi-code/k3` (Kimi Code 0.26+) | Daily-driver judgment session; orchestrates only |
+| Orchestrator fallback | `gpt-5.6-sol` | When neither Fable 5 nor Kimi k3 is available |
 | Coding primary | `grok-4.5` (Grok CLI 0.2.93+) | Fastest coding |
-| Coding secondary | `gpt-5.6-sol` (Codex CLI 0.144.x) | Depth / Grok down |
-| Coding last resort | `claude-opus-4-8` | Subagent only; never Fable |
+| Coding secondary | `kimi-code/kimi-for-coding` (Kimi CLI 0.26+) | Fast fallback / Grok down |
+| Coding tertiary | `gpt-5.6-sol` (Codex CLI 0.144.x) | Depth / quality takeovers |
+| Coding last resort | `claude-opus-4-8` | Subagent only; never Fable, never `k3` |
 | Platforms | Windows (Git Bash), macOS, Linux | Intel Macs: Sol SIGTRAP - pin `gpt-5.5` for Codex |
 
 Pins and flags change; treat the table as a snapshot and re-check the reference

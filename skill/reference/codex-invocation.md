@@ -1,9 +1,11 @@
 # Codex CLI invocation reference
 
-MAP house roles: **Grok 4.5** is the default **coding** executor (speed).
-**Codex `gpt-5.6-sol`** is the **coding fallback** (depth / when Grok is down) and
-the **orchestrator fallback** when **Fable 5** is unavailable. Fable orchestrates
-only - never implement under Fable. Full chain: `skill/SKILL.md`.
+MAP house roles: **Grok 4.5** is the default **coding** executor (speed), then
+**Kimi K2.7** (`kimi-code/kimi-for-coding`) as the fast fallback.
+**Codex `gpt-5.6-sol`** is the **depth/quality** coding step and
+the **orchestrator fallback** when **Fable 5** and **Kimi k3** are unavailable.
+Fable (and `k3`) orchestrate only - never implement under a judgment model.
+Full chain: `skill/SKILL.md`.
 
 Tested against codex-cli 0.144.x, headless, from Claude Code's Bash tool and
 Grok Build (Git Bash on Windows; identical on macOS/Linux, except Intel Macs -
@@ -226,8 +228,10 @@ Caveats, verified on 0.144 with real resumed runs:
    Windows fallback — not as a casual default. Stricter permission modes can deny
    even this sanctioned form — do not retry it with adjusted flags; one denial of
    the plain dispatch → switch executors (SKILL.md, Executor fallback, which also
-   covers the settings remedy). The allowlist rule matches plain dispatches only:
-   the parenthesized resume form may still prompt, and if only resume is denied,
+   covers the settings remedy). The allowlist rule must be
+   `Bash(command codex exec:*)` - dispatches start with `command `, so the bare
+   `Bash(codex exec:*)` form never matches one. Even with the rule in place, the
+   parenthesized resume form may still prompt; if only resume is denied,
    fall back to a fresh plain dispatch — not to another executor.
 3. **Non-fatal MCP auth noise.** A misconfigured MCP server in codex's own config
    (e.g. github-copilot) may print an auth error at startup. It does not affect the

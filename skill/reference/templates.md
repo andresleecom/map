@@ -91,13 +91,16 @@ HARD RULES — violating any of these means your work is discarded:
 ```
 
 Verdict notes: use `sandbox-retry` when the Windows/sandbox fallback ran;
-use `takeover (opus-4.8)` or `takeover (codex-sol)` when a pinned fallback
-implemented after two strikes - never a silent Fable impl and **never Fable**
-as an executor label;
-use `executor-switch (codex-sol)` when Sol ran because Grok could not (or PLAN
-assigned Sol); use `executor-switch (opus-4.8)` for last-resort Opus;
+use `takeover (opus-4.8)`, `takeover (kimi-k2.7)`, or `takeover (codex-sol)` when a pinned fallback
+implemented after two strikes - never a silent Fable/`k3` impl and **never Fable
+or `k3`** as an executor label;
+use `executor-switch (kimi-k2.7)` when K2.7 ran because Grok could not (or PLAN
+assigned Kimi); use `executor-switch (codex-sol)` when Sol ran because Grok could
+not (or PLAN assigned Sol); use `executor-switch (opus-4.8)` for last-resort Opus;
 use `executor = codex-sol (orchestrator impl)` only when Fable 5 was unavailable
-so Sol was the orchestrator and Grok could not run.
+so Sol was the orchestrator and no CLI executor could run;
+use `executor = kimi-code (orchestrator impl)` only when a Kimi orchestrator was
+pinned to `kimi-code/kimi-for-coding` and no CLI executor could run.
 
 ## `.map/GH-QUEUE.md` (only if a session denies external writes)
 
